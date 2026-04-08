@@ -376,7 +376,7 @@ export class DiagramComponent implements OnInit, AfterViewInit, OnDestroy {
   public addActivity() {
       const lane = this.getSelectedLane();
       if (!lane) {
-          alert('Selecciona un carril antes de agregar una actividad.');
+          console.warn('Selecciona un carril antes de agregar una actividad.');
           return;
       }
       this.myDiagram.startTransaction('add activity');
