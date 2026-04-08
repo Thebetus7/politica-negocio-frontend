@@ -1,3 +1,19 @@
 import { Routes } from '@angular/router';
+import { authGuard } from './core/guards/auth.guard';
+import { AppLayoutComponent } from './layout/app-layout/app-layout.component';
 
-export const routes: Routes = [];
+export const routes: Routes = [
+  { path: '', loadComponent: () => import('./features/auth/welcome.component').then(m => m.WelcomeComponent) },
+  { path: 'login', loadComponent: () => import('./features/auth/login.component').then(m => m.LoginComponent) },
+  {
+    path: '', 
+    component: AppLayoutComponent,
+    canActivate: [authGuard],
+    children: [
+      { path: 'dashboard', loadComponent: () => import('./features/dashboard/dashboard.component').then(m => m.DashboardComponent) },
+      // Redirigimos politicas al viejo diagramComponent para que siga funcionando la logica de GoJS
+      { path: 'politicas', loadComponent: () => import('./diagram.component').then(m => m.DiagramComponent) }
+    ]
+  },
+  { path: '**', redirectTo: '' }
+];
