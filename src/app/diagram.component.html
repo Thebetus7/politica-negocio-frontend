@@ -1,0 +1,13 @@
+<div class="header">
+  <h2>Diagramador: Angular & WebSockets</h2>
+</div>
+
+<div class="toolbar">
+  <button (click)="addActivity()">+ Agregar Actividad</button>
+  <button (click)="addLane()">+ Agregar Carril</button>
+  <button (click)="relayoutLanes()">Re-organizar</button>
+</div>
+
+<div class="diagram-container">
+  <div #diagramDiv style="width: 100%; height: 75vh; background-color: #f9f9f9;"></div>
+</div>
