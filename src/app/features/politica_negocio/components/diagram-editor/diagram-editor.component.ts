@@ -1,5 +1,5 @@
 import { Component, AfterViewInit, ElementRef, ViewChild, OnDestroy, OnInit } from '@angular/core';
-import { DiagramService } from './diagram.service';
+import { DiagramService } from '../../services/diagram.service';
 import * as go from 'gojs';
 import { Subject, Subscription } from 'rxjs';
 import { debounceTime } from 'rxjs/operators';
@@ -157,12 +157,12 @@ function updateCrossLaneLinks(group: go.Group) {
 }
 
 @Component({
-  selector: 'app-diagram',
+  selector: 'app-diagram-editor',
   standalone: true,
-  templateUrl: './diagram.component.html',
-  styleUrls: ['./diagram.component.css']
+  templateUrl: './diagram-editor.component.html',
+  styleUrls: ['./diagram-editor.component.css']
 })
-export class DiagramComponent implements OnInit, AfterViewInit, OnDestroy {
+export class DiagramEditorComponent implements OnInit, AfterViewInit, OnDestroy {
   @ViewChild('diagramDiv', { static: true }) diagramDiv!: ElementRef;
   private myDiagram!: go.Diagram;
   private isApplyingRemoteChange = false;

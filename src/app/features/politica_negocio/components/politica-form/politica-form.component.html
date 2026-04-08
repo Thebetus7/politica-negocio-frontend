@@ -1,0 +1,71 @@
+<div *ngIf="show" class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-gray-900/60 backdrop-blur-sm animate-in fade-in duration-200">
+    <div class="bg-white rounded-2xl shadow-2xl w-full max-w-md overflow-hidden transform animate-in zoom-in duration-200" (click)="$event.stopPropagation()">
+        <!-- Header -->
+        <div class="px-6 py-4 border-b border-gray-100 flex items-center justify-between bg-gray-50/50">
+            <h3 class="text-xl font-bold text-gray-800">Nueva Política de Negocio</h3>
+            <button (click)="close()" class="text-gray-400 hover:text-gray-600 transition-colors">
+                <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+                </svg>
+            </button>
+        </div>
+
+        <!-- Body -->
+        <form [formGroup]="form" (ngSubmit)="submit()" class="p-6 space-y-4">
+            <div>
+                <label for="nombre" class="block text-sm font-semibold text-gray-700 mb-1">Nombre de la Política</label>
+                <input
+                    id="nombre"
+                    formControlName="nombre"
+                    type="text"
+                    placeholder="Ej. Política de Descuentos"
+                    class="w-full px-4 py-2 border border-gray-300 rounded-xl focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none transition"
+                />
+                <p *ngIf="form.get('nombre')?.touched && form.get('nombre')?.invalid" class="mt-1 text-xs text-red-500">
+                    El nombre es obligatorio (mín. 3 caracteres).
+                </p>
+            </div>
+
+            <div>
+                <label for="descripcion" class="block text-sm font-semibold text-gray-700 mb-1">Descripción Opcional</label>
+                <textarea
+                    id="descripcion"
+                    formControlName="descripcion"
+                    rows="3"
+                    placeholder="Breve descripción de la política..."
+                    class="w-full px-4 py-2 border border-gray-300 rounded-xl focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none transition"
+                ></textarea>
+            </div>
+
+            <div>
+                <label for="estado" class="block text-sm font-semibold text-gray-700 mb-1">Estado Inicial</label>
+                <select
+                    id="estado"
+                    formControlName="estado"
+                    class="w-full px-4 py-2 border border-gray-300 rounded-xl focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none transition appearance-none bg-no-repeat bg-[right_1rem_center]"
+                >
+                    <option value="borrador">Borrador</option>
+                    <option value="publicado">Publicado</option>
+                </select>
+            </div>
+
+            <!-- Footer Buttons -->
+            <div class="flex items-center justify-end space-x-3 pt-4 border-t border-gray-100">
+                <button
+                    type="button"
+                    (click)="close()"
+                    class="px-5 py-2 text-sm font-semibold text-gray-600 hover:bg-gray-100 rounded-xl transition-colors"
+                >
+                    Cancelar
+                </button>
+                <button
+                    type="submit"
+                    [disabled]="form.invalid"
+                    class="px-5 py-2 text-sm font-bold text-white bg-indigo-600 hover:bg-indigo-700 disabled:opacity-50 disabled:cursor-not-allowed rounded-xl shadow-lg shadow-indigo-200 transition-all active:scale-95"
+                >
+                    Aceptar y Dibujar Diagrama
+                </button>
+            </div>
+        </form>
+    </div>
+</div>

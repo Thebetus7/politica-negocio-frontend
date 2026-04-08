@@ -12,7 +12,8 @@ export const routes: Routes = [
     children: [
       { path: 'dashboard', loadComponent: () => import('./features/dashboard/dashboard.component').then(m => m.DashboardComponent) },
       // Redirigimos politicas al viejo diagramComponent para que siga funcionando la logica de GoJS
-      { path: 'politicas', loadComponent: () => import('./diagram.component').then(m => m.DiagramComponent) }
+      { path: 'politicas', loadComponent: () => import('./features/politica_negocio/pages/politica-list/politica-list.component').then(m => m.PoliticaListComponent) },
+      { path: 'politicas/diagrama/:id', loadComponent: () => import('./features/politica_negocio/components/diagram-editor/diagram-editor.component').then(m => m.DiagramEditorComponent) }
     ]
   },
   { path: '**', redirectTo: '' }
