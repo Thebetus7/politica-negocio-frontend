@@ -20,23 +20,23 @@ export class PoliticaListComponent implements OnInit {
     // Datos de ejemplo basados en el contexto del usuario
     this.politicas.set([
       {
-        id: 1,
+        id: 'pol_1',
         nombre: 'Política de Compras Mayoristas',
         descripcion: 'Reglas para el procesamiento de pedidos superiores a 1000 unidades.',
         estado: 'publicado',
         colaboradores: [
-          { usuario: { name: 'Edberto Sanchez' } },
-          { usuario: { name: 'Juan Perez' } }
+          { usuario: { nombre: 'Edberto Sanchez' } },
+          { usuario: { nombre: 'Juan Perez' } }
         ],
         updated_at: '2026-04-08T12:00:00Z'
       },
       {
-        id: 2,
+        id: 'pol_2',
         nombre: 'Validación de Crédito Cliente',
         descripcion: 'Flujo de aprobación para nuevas solicitudes de crédito.',
         estado: 'borrador',
         colaboradores: [
-          { usuario: { name: 'Maria Lopez' } }
+          { usuario: { nombre: 'Maria Lopez' } }
         ],
         updated_at: '2026-04-08T15:30:00Z'
       }

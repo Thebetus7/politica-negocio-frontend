@@ -4,7 +4,7 @@ import { FormsModule } from '@angular/forms';
 import { RouterLink } from '@angular/router';
 
 export interface Politica {
-  id: number;
+  id: string;
   nombre: string;
   descripcion: string;
   estado: string;
