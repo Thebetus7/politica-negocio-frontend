@@ -14,7 +14,7 @@ export class DiagramService {
   constructor(private http: HttpClient) {
     this.stompClient = new Client({
       // Usamos SockJS como fallback y factory para Stomp
-      webSocketFactory: () => new SockJS('http://localhost:8080/ws-diagram'),
+      webSocketFactory: () => new SockJS('http://localhost:8081/ws-diagram'),
       debug: (str) => console.log('STOMP: ', str),
       reconnectDelay: 5000,
     });
@@ -33,7 +33,7 @@ export class DiagramService {
   }
 
   getBaseDiagram(nombre: string): Observable<any> {
-    return this.http.get(`http://localhost:8080/api/diagrams/base/${nombre}`);
+    return this.http.get(`http://localhost:8081/api/diagrams/base/${nombre}`);
   }
 
   getDiagramUpdates(): Observable<any> {

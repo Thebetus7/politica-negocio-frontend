@@ -36,7 +36,7 @@ export class AuthService {
 
   login(credentials: { username: string; password: string }) {
     return this.http.post<{ status: string, token?: string, user?: User, message?: string }>(
-      'http://localhost:8080/api/auth/login', 
+      'http://localhost:8081/api/auth/login', 
       credentials
     ).pipe(
       tap(res => {
@@ -52,7 +52,7 @@ export class AuthService {
   }
 
   fetchProfile() {
-    return this.http.get<User>('http://localhost:8080/api/auth/me').pipe(
+    return this.http.get<User>('https://cyhh0y-ip-189-28-70-114.tunnelmole.net/api/auth/me').pipe(
       tap(user => {
         this.userSignal.set(user);
       })
