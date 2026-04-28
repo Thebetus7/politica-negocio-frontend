@@ -4,6 +4,7 @@ import { tap } from 'rxjs';
 
 export interface Departamento {
   id?: string;
+  _id?: string;
   nombre: string;
   descripcion?: string;
   createdAt?: string;
@@ -22,6 +23,10 @@ export class DepartamentoService {
     return this.http.get<Departamento[]>(this.apiUrl).pipe(
       tap(data => this.departamentos.set(data))
     );
+  }
+
+  getForSelector() {
+    return this.http.get<Array<{ id?: string; _id?: string; nombre?: string }>>(`${this.apiUrl}/selector`);
   }
 
   create(departamento: Partial<Departamento>) {

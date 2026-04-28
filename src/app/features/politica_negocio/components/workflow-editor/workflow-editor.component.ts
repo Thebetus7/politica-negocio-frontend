@@ -11,13 +11,19 @@ import { FormularioService, Formulario } from '../../../../core/services/formula
 import { FuncionarioDepaService } from '../../../../core/services/funcionario-depa.service';
 import { PoliticaService } from '../../../../core/services/politica.service';
 import { AuthService } from '../../../../core/services/auth.service';
+import { FormUpdateService } from '../../../../core/services/form-update.service';
 import { DiagramService } from '../../services/diagram.service';
 
 // ──────── Interfaces internas ────────
 interface WorkflowNode {
   id: string;
   tempId: string;
-  tipo: string; // actividad | decision | while_do | do_while | fork | join | inicio | fin
+  // Tipos usados por UI del editor
+  // - actividad: tarea normal
+  // - decision: condición (rama)
+  // - pregunta: iterativo (un solo tipo de caja de pregunta)
+  // - inicio / fin
+  tipo: string; // actividad | decision | pregunta | inicio | fin
   nombre: string;
   x: number;
   y: number;
@@ -35,7 +41,8 @@ interface WorkflowLink {
   id: string;
   sourceId: string;
   targetId: string;
-  tipo: string; // secuencial | alternativo | iterativo_while | iterativo_dowhile | paralelo
+  // Se mantiene para compatibilidad con el backend (Flujo.proceso.tipo)
+  tipo: string; // secuencial | alternativo | iterativo_while | paralelo
   label?: string;
   condicion?: string;
 }
@@ -66,6 +73,7 @@ export class WorkflowEditorComponent implements OnInit, OnDestroy {
   private funcionarioDepaService = inject(FuncionarioDepaService);
   private politicaService = inject(PoliticaService);
   private authService = inject(AuthService);
+  private formUpdateService = inject(FormUpdateService);
   private diagramService = inject(DiagramService);
 
   @ViewChild('svgCanvas', { static: true }) svgCanvas!: ElementRef<SVGSVGElement>;
@@ -94,7 +102,6 @@ export class WorkflowEditorComponent implements OnInit, OnDestroy {
   isConnecting = false;
   connectionSource: WorkflowNode | null = null;
   connectionLine = { x1: 0, y1: 0, x2: 0, y2: 0 };
-  connectionType = 'secuencial';
 
   // Funcionarios por departamento (cache)
   funcionariosByDepa = signal<Map<string, any[]>>(new Map());
@@ -106,8 +113,6 @@ export class WorkflowEditorComponent implements OnInit, OnDestroy {
   editNodeFuncId = '';
   editNodeDepaId = '';
 
-  // Toolbar activa
-  activeTool = '';
 
   // Color del cursor local
   cursorColor = this.getRandomColor();
@@ -124,10 +129,7 @@ export class WorkflowEditorComponent implements OnInit, OnDestroy {
   nodeDimensions: Record<string, { w: number; h: number }> = {
     actividad: { w: 200, h: 100 },
     decision: { w: 120, h: 120 },
-    while_do: { w: 130, h: 80 },
-    do_while: { w: 130, h: 80 },
-    fork: { w: 160, h: 30 },
-    join: { w: 160, h: 30 },
+    pregunta: { w: 150, h: 90 },
     inicio: { w: 60, h: 60 },
     fin: { w: 60, h: 60 },
   };
@@ -183,16 +185,18 @@ export class WorkflowEditorComponent implements OnInit, OnDestroy {
       const mapped: WorkflowNode[] = actividades.map(a => ({
         id: a.id!,
         tempId: a.id!,
-        tipo: a.tipoNodo || 'actividad',
+        tipo: this.normalizeTipoNodo(a.tipoNodo || 'actividad'),
         nombre: a.nombre,
         x: parseFloat(a.ejeX) || 100,
         y: parseFloat(a.ejeY) || 100,
         departamentoId: a.departamentoId,
         estado: a.estado,
-        width: this.nodeDimensions[a.tipoNodo || 'actividad']?.w || 200,
-        height: this.nodeDimensions[a.tipoNodo || 'actividad']?.h || 100,
+        formularioId: undefined,
+        width: this.nodeDimensions[this.normalizeTipoNodo(a.tipoNodo || 'actividad')]?.w || 200,
+        height: this.nodeDimensions[this.normalizeTipoNodo(a.tipoNodo || 'actividad')]?.h || 100,
       }));
       this.nodes.set(mapped);
+      this.hydrateFormAssignments(mapped);
     });
   }
 
@@ -245,7 +249,7 @@ export class WorkflowEditorComponent implements OnInit, OnDestroy {
       estado: 'pendiente',
       ejeX: String(newNode.x),
       ejeY: String(newNode.y),
-      tipoNodo: tipo,
+      tipoNodo: this.persistTipoNodo(tipo),
     };
     this.actividadService.create(this.politicaId, actividad).subscribe(saved => {
       this.nodes.update(list =>
@@ -259,10 +263,7 @@ export class WorkflowEditorComponent implements OnInit, OnDestroy {
     const names: Record<string, string> = {
       actividad: 'Nueva Actividad',
       decision: '¿Condición?',
-      while_do: 'While',
-      do_while: 'Do-While',
-      fork: 'Fork',
-      join: 'Join',
+      pregunta: '¿Pregunta?',
       inicio: 'Inicio',
       fin: 'Fin'
     };
@@ -271,9 +272,14 @@ export class WorkflowEditorComponent implements OnInit, OnDestroy {
 
   // ──────── Drag & Drop nodos ────────
   onNodeMouseDown(event: MouseEvent, node: WorkflowNode): void {
-    if (this.isConnecting) return;
     event.preventDefault();
     event.stopPropagation();
+    // Shift + drag: conectar libremente desde cualquier punto del nodo
+    if (event.shiftKey) {
+      this.startConnection(node, event);
+      return;
+    }
+    if (this.isConnecting) return;
     this.isDragging = true;
     this.dragNode = node;
     const pt = this.screenToSvg(event.clientX, event.clientY);
@@ -370,9 +376,8 @@ export class WorkflowEditorComponent implements OnInit, OnDestroy {
     event.stopPropagation();
     this.isConnecting = true;
     this.connectionSource = node;
-    const cx = node.x + node.width;
-    const cy = node.y + node.height / 2;
-    this.connectionLine = { x1: cx, y1: cy, x2: cx, y2: cy };
+    const pt = this.screenToSvg(event.clientX, event.clientY);
+    this.connectionLine = { x1: pt.x, y1: pt.y, x2: pt.x, y2: pt.y };
   }
 
   endConnection(targetNode: WorkflowNode): void {
@@ -381,12 +386,15 @@ export class WorkflowEditorComponent implements OnInit, OnDestroy {
       return;
     }
 
+    const computedTipo = this.computeLinkTipo(this.connectionSource);
+    const label = this.computeLinkLabel(this.connectionSource, computedTipo);
+
     const newLink: WorkflowLink = {
       id: '',
       sourceId: this.connectionSource.id || this.connectionSource.tempId,
       targetId: targetNode.id || targetNode.tempId,
-      tipo: this.connectionType,
-      label: this.connectionType === 'alternativo' ? 'Sí' : '',
+      tipo: computedTipo,
+      label,
     };
 
     this.links.update(list => [...list, newLink]);
@@ -397,7 +405,7 @@ export class WorkflowEditorComponent implements OnInit, OnDestroy {
         politicaId: this.politicaId,
         actividadId: this.connectionSource.id,
         proceso: {
-          tipo: this.connectionType,
+          tipo: computedTipo,
           siguientes: [{ actividadDestinoId: targetNode.id, label: newLink.label }],
           estadoActual: 'pendiente',
           orden: this.links().length
@@ -414,14 +422,18 @@ export class WorkflowEditorComponent implements OnInit, OnDestroy {
     this.cancelConnection();
   }
 
+  onNodeMouseUp(event: MouseEvent, node: WorkflowNode): void {
+    // Si estamos conectando, cerrar conexión sobre el nodo destino
+    // y evitar que el mouseup burbujee al canvas.
+    if (this.isConnecting) {
+      event.stopPropagation();
+      this.endConnection(node);
+    }
+  }
+
   cancelConnection(): void {
     this.isConnecting = false;
     this.connectionSource = null;
-  }
-
-  setConnectionType(type: string): void {
-    this.connectionType = type;
-    this.activeTool = type;
   }
 
   // ──────── Selección ────────
@@ -483,18 +495,52 @@ export class WorkflowEditorComponent implements OnInit, OnDestroy {
 
     // Persistir
     if (persist && node.id) {
+      this.persistNodeAndFormUpdate(node);
+    }
+  }
+
+  private persistNodeAndFormUpdate(node: WorkflowNode): void {
+    const applyActividadUpdate = (formUpdateId?: string) => {
       const actividad: Actividad = {
         politicaId: this.politicaId,
         departamentoId: node.departamentoId,
         nombre: node.nombre,
         ejeX: String(node.x),
         ejeY: String(node.y),
-        tipoNodo: node.tipo,
+        tipoNodo: this.persistTipoNodo(node.tipo),
+        formUpdateId
       };
       this.actividadService.update(this.politicaId, node.id, actividad).subscribe(() => {
         this.broadcastUpdate();
       });
+    };
+
+    if (!node.id) return;
+
+    if (!node.formularioId) {
+      applyActividadUpdate(undefined);
+      return;
     }
+
+    this.formUpdateService.getByActividad(node.id).subscribe(existing => {
+      const current = existing[0];
+      const payload = {
+        actividadId: node.id!,
+        formularioId: node.formularioId!,
+        contenidoUpdate: current?.contenidoUpdate || '{}'
+      };
+
+      if (current?.id) {
+        this.formUpdateService.update(current.id, payload).subscribe(updated => {
+          applyActividadUpdate(updated.id);
+        });
+        return;
+      }
+
+      this.formUpdateService.create(payload).subscribe(created => {
+        applyActividadUpdate(created.id);
+      });
+    });
   }
 
   onDepartmentChange(event: any): void {
@@ -613,10 +659,12 @@ export class WorkflowEditorComponent implements OnInit, OnDestroy {
     const target = this.nodes().find(n => n.id === link.targetId || n.tempId === link.targetId);
     if (!source || !target) return '';
 
-    const x1 = source.x + source.width;
-    const y1 = source.y + source.height / 2;
-    const x2 = target.x;
-    const y2 = target.y + target.height / 2;
+    const from = this.getAnchorPoint(source, target);
+    const to = this.getAnchorPoint(target, source);
+    const x1 = from.x;
+    const y1 = from.y;
+    const x2 = to.x;
+    const y2 = to.y;
     const cx = (x1 + x2) / 2;
 
     return `M ${x1} ${y1} C ${cx} ${y1}, ${cx} ${y2}, ${x2} ${y2}`;
@@ -627,7 +675,7 @@ export class WorkflowEditorComponent implements OnInit, OnDestroy {
     const target = this.nodes().find(n => n.id === link.targetId || n.tempId === link.targetId);
     if (!source || !target) return { x: 0, y: 0 };
     return {
-      x: (source.x + source.width + target.x) / 2,
+      x: (source.x + source.width / 2 + target.x + target.width / 2) / 2,
       y: (source.y + source.height / 2 + target.y + target.height / 2) / 2 - 10,
     };
   }
@@ -637,7 +685,6 @@ export class WorkflowEditorComponent implements OnInit, OnDestroy {
       secuencial: '#3b82f6',
       alternativo: '#f59e0b',
       iterativo_while: '#10b981',
-      iterativo_dowhile: '#06b6d4',
       paralelo: '#8b5cf6',
     };
     return colors[tipo] || '#64748b';
@@ -647,10 +694,7 @@ export class WorkflowEditorComponent implements OnInit, OnDestroy {
     const colors: Record<string, string> = {
       actividad: '#6366f1',
       decision: '#f59e0b',
-      while_do: '#10b981',
-      do_while: '#06b6d4',
-      fork: '#8b5cf6',
-      join: '#8b5cf6',
+      pregunta: '#10b981',
       inicio: '#22c55e',
       fin: '#ef4444',
     };
@@ -659,8 +703,7 @@ export class WorkflowEditorComponent implements OnInit, OnDestroy {
 
   getNodeIcon(tipo: string): string {
     const icons: Record<string, string> = {
-      actividad: '📋', decision: '◇', while_do: '↻', do_while: '↻',
-      fork: '‖', join: '‖', inicio: '▶', fin: '⬛'
+      actividad: '📋', decision: '◇', pregunta: '?', inicio: '▶', fin: '⬛'
     };
     return icons[tipo] || '📋';
   }
@@ -757,5 +800,78 @@ export class WorkflowEditorComponent implements OnInit, OnDestroy {
 
   trackByDepa(index: number, depa: any): string {
     return depa.id;
+  }
+
+  // ──────── Normalización / compatibilidad ────────
+  private normalizeTipoNodo(tipoNodo: string): string {
+    // Unificamos while/do-while a un solo nodo de pregunta
+    if (tipoNodo === 'while_do' || tipoNodo === 'do_while') return 'pregunta';
+    // fork/join quedan “deprecados”; se renderizan como actividad normal
+    if (tipoNodo === 'fork' || tipoNodo === 'join') return 'actividad';
+    return tipoNodo;
+  }
+
+  private persistTipoNodo(tipo: string): string {
+    // Para mantener compatibilidad con backend, persistimos "pregunta" como while_do
+    if (tipo === 'pregunta') return 'while_do';
+    return tipo;
+  }
+
+  private hydrateFormAssignments(nodes: WorkflowNode[]): void {
+    nodes
+      .filter(n => !!n.id && n.tipo === 'actividad')
+      .forEach(node => {
+        this.formUpdateService.getByActividad(node.id).subscribe(updates => {
+          const first = updates[0];
+          if (!first?.formularioId) return;
+
+          const form = this.formularios().find(f => f.id === first.formularioId);
+          this.nodes.update(list =>
+            list.map(n => n.id === node.id
+              ? {
+                  ...n,
+                  formularioId: first.formularioId,
+                  formularioNombre: form?.nombre
+                }
+              : n)
+          );
+        });
+      });
+  }
+
+  // ──────── Links: tipo y label auto ────────
+  private computeLinkTipo(source: WorkflowNode): string {
+    if (source.tipo === 'decision') return 'alternativo';
+    if (source.tipo === 'pregunta') return 'iterativo_while';
+
+    const sourceKey = source.id || source.tempId;
+    const outgoingCount = this.links().filter(l => l.sourceId === sourceKey).length;
+    if (outgoingCount >= 1) return 'paralelo';
+    return 'secuencial';
+  }
+
+  private computeLinkLabel(source: WorkflowNode, tipo: string): string {
+    if (tipo !== 'alternativo') return '';
+    const sourceKey = source.id || source.tempId;
+    const outgoingCount = this.links().filter(l => l.sourceId === sourceKey && l.tipo === 'alternativo').length;
+    return outgoingCount === 0 ? 'Sí' : 'No';
+  }
+
+  // ──────── Anchors: conectar donde sea ────────
+  private getAnchorPoint(from: WorkflowNode, towards: WorkflowNode): { x: number; y: number } {
+    const fx = from.x + from.width / 2;
+    const fy = from.y + from.height / 2;
+    const tx = towards.x + towards.width / 2;
+    const ty = towards.y + towards.height / 2;
+
+    const dx = tx - fx;
+    const dy = ty - fy;
+    if (dx === 0 && dy === 0) return { x: fx, y: fy };
+
+    // Aproximamos por caja (funciona bien para rect/hex/diamond/circle a nivel visual)
+    const halfW = from.width / 2;
+    const halfH = from.height / 2;
+    const scale = 1 / Math.max(Math.abs(dx) / (halfW || 1), Math.abs(dy) / (halfH || 1));
+    return { x: fx + dx * scale, y: fy + dy * scale };
   }
 }

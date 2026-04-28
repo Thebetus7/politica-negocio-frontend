@@ -1,6 +1,7 @@
 import { Injectable, inject, signal } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { tap } from 'rxjs';
+import { catchError, throwError } from 'rxjs';
 
 export interface PoliticaNegocio {
   id?: string;
@@ -20,10 +21,14 @@ export class PoliticaService {
 
   getAll() {
     this.loading.set(true);
-    return this.http.get<PoliticaNegocio[]>(this.apiUrl).pipe(
+    return this.http.get<PoliticaNegocio[]>(`${this.apiUrl}/public`).pipe(
       tap(data => {
         this.politicas.set(data);
         this.loading.set(false);
+      }),
+      catchError((err) => {
+        this.loading.set(false);
+        return throwError(() => err);
       })
     );
   }

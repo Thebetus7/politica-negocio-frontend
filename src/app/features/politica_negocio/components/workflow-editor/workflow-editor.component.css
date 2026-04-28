@@ -145,6 +145,21 @@
   color: #c7d2fe;
 }
 
+.toolbar-hint {
+  padding: 8px 10px;
+  border: 1px dashed #2a2a5a;
+  border-radius: 10px;
+  color: #94a3b8;
+  font-size: 0.7rem;
+  line-height: 1.2;
+  margin: 4px 6px 2px;
+}
+
+.toolbar-hint strong {
+  color: #c7d2fe;
+  font-weight: 700;
+}
+
 .tool-btn.danger:hover {
   background: rgba(239, 68, 68, 0.15);
   border-color: #ef4444;
@@ -215,23 +230,6 @@
 
 .node-group:active {
   cursor: grabbing;
-}
-
-/* ─── PORTS ─── */
-.port {
-  cursor: crosshair;
-  transition: all 0.15s;
-  opacity: 0;
-}
-
-.node-group:hover .port {
-  opacity: 1;
-}
-
-.port:hover {
-  fill: #6366f1 !important;
-  stroke: #c7d2fe !important;
-  r: 9;
 }
 
 /* ─── LINKS ─── */

@@ -1,4 +1,4 @@
-import { Component, Input, Output, EventEmitter, computed, signal } from '@angular/core';
+import { Component, Input, Output, EventEmitter, OnChanges, SimpleChanges, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { RouterLink } from '@angular/router';
@@ -18,27 +18,44 @@ export interface Politica {
   imports: [CommonModule, FormsModule, RouterLink],
   templateUrl: './politica-table.component.html',
 })
-export class PoliticaTableComponent {
+export class PoliticaTableComponent implements OnChanges {
   @Input() politicas: Politica[] = [];
   @Output() onEliminar = new EventEmitter<Politica>();
-  @Output() onGestionarColaboradores = new EventEmitter<Politica>();
+  @Output() onVer = new EventEmitter<Politica>();
 
   search = signal('');
+  politicasFiltradas = signal<Politica[]>([]);
 
-  politicasFiltradas = computed(() => {
-    const term = this.search().toLowerCase().trim();
-    if (!term) return this.politicas;
-    return this.politicas.filter(p => 
-      p.nombre.toLowerCase().includes(term) || 
-      (p.descripcion && p.descripcion.toLowerCase().includes(term))
+  ngOnChanges(changes: SimpleChanges): void {
+    if (changes['politicas']) {
+      this.aplicarFiltro(this.search());
+    }
+  }
+
+  onSearchChange(value: string): void {
+    this.search.set(value);
+    this.aplicarFiltro(value);
+  }
+
+  private aplicarFiltro(term: string): void {
+    const query = term.toLowerCase().trim();
+    if (!query) {
+      this.politicasFiltradas.set(this.politicas);
+      return;
+    }
+    this.politicasFiltradas.set(
+      this.politicas.filter(p =>
+        p.nombre.toLowerCase().includes(query) ||
+        (p.descripcion && p.descripcion.toLowerCase().includes(query))
+      )
     );
-  });
+  }
 
   eliminar(politica: Politica) {
     this.onEliminar.emit(politica);
   }
 
-  gestionarColaboradores(politica: Politica) {
-    this.onGestionarColaboradores.emit(politica);
+  verPolitica(politica: Politica) {
+    this.onVer.emit(politica);
   }
 }

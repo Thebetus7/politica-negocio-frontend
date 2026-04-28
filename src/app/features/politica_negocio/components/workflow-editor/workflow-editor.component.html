@@ -27,21 +27,9 @@
           <span class="tool-icon" style="color:#f59e0b">◇</span>
           <span class="tool-text">Decisión</span>
         </button>
-        <button class="tool-btn" (click)="addNode('while_do')" title="While-Do">
-          <span class="tool-icon" style="color:#10b981">↻W</span>
-          <span class="tool-text">While-Do</span>
-        </button>
-        <button class="tool-btn" (click)="addNode('do_while')" title="Do-While">
-          <span class="tool-icon" style="color:#06b6d4">↻D</span>
-          <span class="tool-text">Do-While</span>
-        </button>
-        <button class="tool-btn" (click)="addNode('fork')" title="Fork">
-          <span class="tool-icon" style="color:#8b5cf6">‖F</span>
-          <span class="tool-text">Fork</span>
-        </button>
-        <button class="tool-btn" (click)="addNode('join')" title="Join">
-          <span class="tool-icon" style="color:#8b5cf6">‖J</span>
-          <span class="tool-text">Join</span>
+        <button class="tool-btn" (click)="addNode('pregunta')" title="Pregunta (Iterativo)">
+          <span class="tool-icon" style="color:#10b981">?</span>
+          <span class="tool-text">Pregunta</span>
         </button>
         <button class="tool-btn" (click)="addNode('fin')" title="Fin">
           <span class="tool-icon" style="color:#ef4444">⬛</span>
@@ -50,27 +38,11 @@
       </div>
 
       <div class="toolbar-section">
-        <span class="toolbar-label">Conexión</span>
-        <button class="tool-btn" [class.active]="connectionType === 'secuencial'"
-                (click)="setConnectionType('secuencial')" title="Secuencial">
-          <span class="tool-icon" style="color:#3b82f6">→</span>
-          <span class="tool-text">Secuencial</span>
-        </button>
-        <button class="tool-btn" [class.active]="connectionType === 'alternativo'"
-                (click)="setConnectionType('alternativo')" title="Alternativo">
-          <span class="tool-icon" style="color:#f59e0b">◇→</span>
-          <span class="tool-text">Alternativo</span>
-        </button>
-        <button class="tool-btn" [class.active]="connectionType === 'iterativo_while'"
-                (click)="setConnectionType('iterativo_while')" title="Iterativo While">
-          <span class="tool-icon" style="color:#10b981">↻</span>
-          <span class="tool-text">Iterativo</span>
-        </button>
-        <button class="tool-btn" [class.active]="connectionType === 'paralelo'"
-                (click)="setConnectionType('paralelo')" title="Paralelo">
-          <span class="tool-icon" style="color:#8b5cf6">‖</span>
-          <span class="tool-text">Paralelo</span>
-        </button>
+        <span class="toolbar-label">Conectar</span>
+        <div class="toolbar-hint">
+          <div><strong>Shift + arrastrar</strong></div>
+          <div>desde un nodo → suelta sobre otro</div>
+        </div>
       </div>
 
       <div class="toolbar-section">
@@ -177,6 +149,7 @@
         @for (node of nodes(); track trackByNode($index, node)) {
           <g [attr.transform]="'translate(' + node.x + ',' + node.y + ')'"
              (mousedown)="onNodeMouseDown($event, node)"
+             (mouseup)="onNodeMouseUp($event, node)"
              (contextmenu)="onNodeContextMenu($event, node)"
              class="node-group"
              [class.selected]="selectedNode() === node">
@@ -217,47 +190,16 @@
                       font-family="Inter, sans-serif">{{ node.nombre }}</text>
               }
 
-              @case ('while_do') {
-                <!-- Hexágono -->
+              @case ('pregunta') {
+                <!-- Hexágono / pregunta iterativa -->
                 <polygon [attr.points]="'20,0 '+(node.width-20)+',0 '+node.width+','+node.height/2+' '+(node.width-20)+','+node.height+' 20,'+node.height+' 0,'+node.height/2"
                          [attr.fill]="getNodeColor(node.tipo)"
                          stroke="#34d399" stroke-width="2"
                          filter="url(#node-shadow)"
                          class="node-shape"/>
                 <text [attr.x]="node.width / 2" [attr.y]="node.height / 2 + 5"
-                      text-anchor="middle" fill="white" font-size="12" font-weight="600"
-                      font-family="Inter, sans-serif">↻ {{ node.nombre }}</text>
-              }
-
-              @case ('do_while') {
-                <polygon [attr.points]="'20,0 '+(node.width-20)+',0 '+node.width+','+node.height/2+' '+(node.width-20)+','+node.height+' 20,'+node.height+' 0,'+node.height/2"
-                         [attr.fill]="getNodeColor(node.tipo)"
-                         stroke="#22d3ee" stroke-width="2"
-                         filter="url(#node-shadow)"
-                         class="node-shape"/>
-                <text [attr.x]="node.width / 2" [attr.y]="node.height / 2 + 5"
-                      text-anchor="middle" fill="white" font-size="12" font-weight="600"
-                      font-family="Inter, sans-serif">↻ {{ node.nombre }}</text>
-              }
-
-              @case ('fork') {
-                <rect [attr.width]="node.width" [attr.height]="node.height"
-                      rx="4" [attr.fill]="getNodeColor(node.tipo)"
-                      stroke="#a78bfa" stroke-width="2"
-                      filter="url(#node-shadow)" class="node-shape"/>
-                <text [attr.x]="node.width / 2" [attr.y]="node.height / 2 + 5"
-                      text-anchor="middle" fill="white" font-size="11" font-weight="700"
-                      font-family="Inter, sans-serif">‖ FORK</text>
-              }
-
-              @case ('join') {
-                <rect [attr.width]="node.width" [attr.height]="node.height"
-                      rx="4" [attr.fill]="getNodeColor(node.tipo)"
-                      stroke="#a78bfa" stroke-width="2"
-                      filter="url(#node-shadow)" class="node-shape"/>
-                <text [attr.x]="node.width / 2" [attr.y]="node.height / 2 + 5"
-                      text-anchor="middle" fill="white" font-size="11" font-weight="700"
-                      font-family="Inter, sans-serif">‖ JOIN</text>
+                      text-anchor="middle" fill="white" font-size="12" font-weight="700"
+                      font-family="Inter, sans-serif">? {{ node.nombre }}</text>
               }
 
               @case ('inicio') {
@@ -282,18 +224,6 @@
                       font-family="Inter, sans-serif">FIN</text>
               }
             }
-
-            <!-- Puerto de entrada (izquierda) -->
-            <circle cx="0" [attr.cy]="node.height / 2" r="7"
-                    fill="#1e293b" stroke="#94a3b8" stroke-width="2"
-                    class="port port-in"
-                    (mouseup)="endConnection(node); $event.stopPropagation()"/>
-
-            <!-- Puerto de salida (derecha) -->
-            <circle [attr.cx]="node.width" [attr.cy]="node.height / 2" r="7"
-                    fill="#1e293b" stroke="#94a3b8" stroke-width="2"
-                    class="port port-out"
-                    (mousedown)="startConnection(node, $event)"/>
 
             <!-- Botón de eliminación -->
             <g class="node-delete-btn" (click)="deleteNode(node, $event)" (mousedown)="$event.stopPropagation()" [attr.transform]="'translate(' + (node.width - 5) + ', -5)'">
@@ -372,26 +302,13 @@
           <h3>Conexión</h3>
 
           <div class="prop-group">
-            <label>Tipo de ruta</label>
-            <select [(ngModel)]="link.tipo" (change)="updateLinkProperties()">
-              <option value="secuencial">Secuencial →</option>
-              <option value="alternativo">Alternativo ◇→</option>
-              <option value="iterativo_while">Iterativo ↻</option>
-              <option value="iterativo_dowhile">Iterativo Do-While ↻</option>
-              <option value="paralelo">Paralelo ‖</option>
-            </select>
+            <label>Etiqueta (opcional)</label>
+            <input type="text" [(ngModel)]="link.label" (blur)="updateLinkProperties()"/>
           </div>
-
-          @if (link.tipo === 'alternativo') {
-            <div class="prop-group">
-              <label>Etiqueta</label>
-              <input type="text" [(ngModel)]="link.label" (blur)="updateLinkProperties()"/>
-            </div>
-            <div class="prop-group">
-              <label>Condición</label>
-              <input type="text" [(ngModel)]="link.condicion" (blur)="updateLinkProperties()"/>
-            </div>
-          }
+          <div class="prop-group">
+            <label>Condición (opcional)</label>
+            <input type="text" [(ngModel)]="link.condicion" (blur)="updateLinkProperties()"/>
+          </div>
 
           <button class="btn-delete" (click)="deleteSelected()">🗑 Eliminar conexión</button>
         }
