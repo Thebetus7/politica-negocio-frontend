@@ -1,14 +1,13 @@
 import { Injectable, inject, signal } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { tap } from 'rxjs';
-
 export interface CampoFormulario {
-  id: string;
-  tipo: 'texto' | 'texto_largo' | 'numero' | 'email' | 'telefono' | 'fecha' | 'lista' | 'checkbox' | 'radio' | 'archivo' | 'url';
+  id: string;            // UUID generado en frontend para trackear
+  tipo: 'texto' | 'texto_largo' | 'numero' | 'fecha' | 'lista' | 'checkbox' | 'radio';
   etiqueta: string;
   placeholder?: string;
   requerido: boolean;
-  opciones?: string[]; // para lista y radio
+  opciones?: string[];   // para lista, radio
   orden: number;
 }
 
@@ -21,47 +20,46 @@ export interface Formulario {
   updatedAt?: string;
 }
 
-@Injectable({
-  providedIn: 'root'
-})
+@Injectable({ providedIn: 'root' })
 export class FormularioService {
   private http = inject(HttpClient);
   private apiUrl = 'http://localhost:8081/api/formularios';
 
   formularios = signal<Formulario[]>([]);
+  loading = signal(false);
 
   getAll() {
+    this.loading.set(true);
     return this.http.get<Formulario[]>(this.apiUrl).pipe(
-      tap(data => this.formularios.set(data))
-    );
-  }
-
-  getById(id: string) {
-    return this.http.get<Formulario>(`${this.apiUrl}/${id}`);
-  }
-
-  create(formulario: Omit<Formulario, 'id'>) {
-    return this.http.post<Formulario>(this.apiUrl, formulario).pipe(
-      tap(nuevo => {
-        this.formularios.update(lista => [...lista, nuevo]);
+      tap(data => {
+        this.formularios.set(data);
+        this.loading.set(false);
       })
     );
   }
 
-  update(id: string, formulario: Partial<Formulario>) {
+  create(formulario: Formulario) {
+    return this.http.post<Formulario>(this.apiUrl, formulario).pipe(
+      tap(nuevo => {
+        this.formularios.update(list => [...list, nuevo]);
+      })
+    );
+  }
+
+  update(id: string, formulario: Formulario) {
     return this.http.put<Formulario>(`${this.apiUrl}/${id}`, formulario).pipe(
-      tap(actualizado => {
-        this.formularios.update(lista =>
-          lista.map(f => f.id === id ? actualizado : f)
+      tap(updated => {
+        this.formularios.update(list =>
+          list.map(f => f.id === id ? updated : f)
         );
       })
     );
   }
 
-  delete(id: string) {
+  softDelete(id: string) {
     return this.http.delete(`${this.apiUrl}/${id}`).pipe(
       tap(() => {
-        this.formularios.update(lista => lista.filter(f => f.id !== id));
+        this.formularios.update(list => list.filter(f => f.id !== id));
       })
     );
   }

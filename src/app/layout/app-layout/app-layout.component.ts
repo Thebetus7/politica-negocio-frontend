@@ -56,6 +56,13 @@ import { AuthService } from '../../core/services/auth.service';
                     Políticas
                   </a>
                 }
+
+                @if (authService.isAdmin()) {
+                  <a routerLink="/formularios" routerLinkActive="border-indigo-500 text-indigo-600 dark:text-indigo-400"
+                     class="inline-flex items-center px-1 pt-1 border-b-2 border-transparent text-sm font-semibold leading-5 text-gray-500 hover:text-gray-700 hover:border-gray-300 focus:outline-none transition-all duration-200">
+                    Formularios
+                  </a>
+                }
               </div>
             </div>
 
@@ -120,6 +127,9 @@ import { AuthService } from '../../core/services/auth.service';
 
             @if (authService.hasAnyRole(['ADMINISTRADOR', 'FUNCIONARIO'])) {
               <a routerLink="/politicas" routerLinkActive="bg-indigo-50 border-indigo-500 text-indigo-700 dark:bg-gray-800 dark:text-white" class="block ps-3 pe-4 py-2 border-l-4 border-transparent text-base font-medium text-gray-600 hover:bg-gray-50 hover:border-gray-300 transition">Políticas</a>
+            }
+            @if (authService.isAdmin()) {
+              <a routerLink="/formularios" routerLinkActive="bg-indigo-50 border-indigo-500 text-indigo-700 dark:bg-gray-800 dark:text-white" class="block ps-3 pe-4 py-2 border-l-4 border-transparent text-base font-medium text-gray-600 hover:bg-gray-50 hover:border-gray-300 transition">Formularios</a>
             }
           </div>
           <div class="pt-4 pb-1 border-t border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800/50">

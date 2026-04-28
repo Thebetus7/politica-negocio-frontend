@@ -1,9 +1,11 @@
 import { Component, inject } from '@angular/core';
+import { RouterLink } from '@angular/router';
 import { AuthService } from '../../core/services/auth.service';
 
 @Component({
   selector: 'app-dashboard',
   standalone: true,
+  imports: [RouterLink],
   template: `
     <div class="bg-white dark:bg-gray-800 overflow-hidden shadow-xl sm:rounded-lg">
       <div class="p-6 sm:px-20 bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700">
@@ -74,6 +76,23 @@ import { AuthService } from '../../core/services/auth.service';
             </p>
             <div class="mt-4">
               <a routerLink="/usuarios" class="text-blue-600 dark:text-blue-400 font-bold hover:underline">Gestionar Usuarios &rarr;</a>
+            </div>
+          </div>
+        }
+        <!-- Sección Formularios (Admin) -->
+        @if (authService.hasRole('ADMINISTRADOR')) {
+          <div class="bg-white dark:bg-gray-700 p-6 rounded-xl shadow-sm border border-gray-100 dark:border-gray-600">
+            <div class="flex items-center">
+              <div class="p-3 bg-orange-100 dark:bg-orange-900/50 rounded-lg">
+                <svg fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" viewBox="0 0 24 24" class="w-8 h-8 text-orange-600 dark:text-orange-400"><path d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-3 7h3m-3 4h3m-6-4h.01M9 16h.01"></path></svg>
+              </div>
+              <h2 class="ms-3 text-xl font-semibold text-gray-900 dark:text-gray-100">Formularios</h2>
+            </div>
+            <p class="mt-4 text-gray-500 dark:text-gray-400 text-sm leading-relaxed">
+              Diseña formularios dinámicos con campos personalizados (texto, listas, fechas, archivos y más) y guarda su estructura en JSON.
+            </p>
+            <div class="mt-4">
+              <a routerLink="/formularios" class="text-orange-600 dark:text-orange-400 font-bold hover:underline">Gestionar Formularios &rarr;</a>
             </div>
           </div>
         }
