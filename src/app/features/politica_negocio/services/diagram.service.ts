@@ -1,5 +1,4 @@
 import { Injectable } from '@angular/core';
-import { HttpClient } from '@angular/common/http';
 import { Client } from '@stomp/stompjs';
 import SockJS from 'sockjs-client';
 import { Observable, Subject } from 'rxjs';
@@ -8,44 +7,100 @@ import { Observable, Subject } from 'rxjs';
   providedIn: 'root'
 })
 export class DiagramService {
-  private stompClient: Client;
+  private stompClient!: Client;
   private diagramUpdates = new Subject<any>();
-
-  constructor(private http: HttpClient) {
-    this.stompClient = new Client({
-      // Usamos SockJS como fallback y factory para Stomp
-      webSocketFactory: () => new SockJS('http://localhost:8081/ws-diagram'),
-      debug: (str) => console.log('STOMP: ', str),
-      reconnectDelay: 5000,
-    });
-    
-    this.stompClient.onConnect = (frame) => {
-      console.log('Connectado a WebSocket');
-      // Suscripción al tópico general o específico del diagrama. ID=1 por conveniencia de prueba
-      this.stompClient.subscribe('/topic/diagram/1', (message) => {
-        if (message.body) {
-          this.diagramUpdates.next(message.body);
-        }
-      });
-    };
-    
-    this.stompClient.activate();
-  }
-
-  getBaseDiagram(nombre: string): Observable<any> {
-    return this.http.get(`http://localhost:8081/api/diagrams/base/${nombre}`);
-  }
+  private cursorUpdates = new Subject<any>();
+  private currentPoliticaId: string | null = null;
 
   getDiagramUpdates(): Observable<any> {
     return this.diagramUpdates.asObservable();
   }
 
-  sendDiagramUpdate(id: string, jsonContent: string) {
-    if (this.stompClient.connected) {
+  getCursorUpdates(): Observable<any> {
+    return this.cursorUpdates.asObservable();
+  }
+
+  /**
+   * Conectar al WebSocket de un diagrama específico por politicaId.
+   */
+  connectToDiagram(politicaId: string): void {
+    // Si ya estamos conectados al mismo, no reconectar
+    if (this.currentPoliticaId === politicaId && this.stompClient?.connected) {
+      return;
+    }
+
+    // Desconectar si había conexión previa
+    this.disconnect();
+
+    this.currentPoliticaId = politicaId;
+
+    this.stompClient = new Client({
+      webSocketFactory: () => new SockJS('http://localhost:8081/ws-diagram'),
+      debug: (str) => console.log('STOMP: ', str),
+      reconnectDelay: 5000,
+    });
+
+    this.stompClient.onConnect = () => {
+      console.log(`Conectado a WebSocket para política: ${politicaId}`);
+
+      // Suscripción a actualizaciones del diagrama
+      this.stompClient.subscribe(`/topic/diagram/${politicaId}`, (message) => {
+        if (message.body) {
+          try {
+            this.diagramUpdates.next(JSON.parse(message.body));
+          } catch {
+            this.diagramUpdates.next(message.body);
+          }
+        }
+      });
+
+      // Suscripción a posiciones de cursores de otros usuarios
+      this.stompClient.subscribe(`/topic/diagram/cursors/${politicaId}`, (message) => {
+        if (message.body) {
+          try {
+            this.cursorUpdates.next(JSON.parse(message.body));
+          } catch {
+            this.cursorUpdates.next(message.body);
+          }
+        }
+      });
+    };
+
+    this.stompClient.activate();
+  }
+
+  /**
+   * Enviar actualización del diagrama.
+   */
+  sendDiagramUpdate(data: any): void {
+    if (this.stompClient?.connected && this.currentPoliticaId) {
       this.stompClient.publish({
-        destination: `/app/diagram/update/${id}`,
-        body: jsonContent
+        destination: `/app/diagram/update/${this.currentPoliticaId}`,
+        body: JSON.stringify(data)
       });
     }
+  }
+
+  /**
+   * Enviar posición del cursor del usuario actual.
+   * Payload: { userId, nombre, x, y, color }
+   */
+  sendCursorPosition(cursorData: { userId: string; nombre: string; x: number; y: number; color: string }): void {
+    if (this.stompClient?.connected && this.currentPoliticaId) {
+      this.stompClient.publish({
+        destination: `/app/diagram/cursor/${this.currentPoliticaId}`,
+        body: JSON.stringify(cursorData)
+      });
+    }
+  }
+
+  /**
+   * Desconectar WebSocket.
+   */
+  disconnect(): void {
+    if (this.stompClient?.connected) {
+      this.stompClient.deactivate();
+    }
+    this.currentPoliticaId = null;
   }
 }

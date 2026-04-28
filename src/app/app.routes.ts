@@ -42,7 +42,7 @@ export const routes: Routes = [
       },
       { 
         path: 'politicas/diagrama/:id', 
-        loadComponent: () => import('./features/politica_negocio/components/diagram-editor/diagram-editor.component').then(m => m.DiagramEditorComponent),
+        loadComponent: () => import('./features/politica_negocio/components/workflow-editor/workflow-editor.component').then(m => m.WorkflowEditorComponent),
         canActivate: [roleGuard],
         data: { roles: ['ADMINISTRADOR', 'ROLE_ADMINISTRADOR', 'FUNCIONARIO', 'ROLE_FUNCIONARIO'] }
       },

@@ -1,8 +1,9 @@
-import { Component, OnInit, signal } from '@angular/core';
+import { Component, OnInit, inject, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { PoliticaTableComponent, Politica } from '../../components/politica-table/politica-table.component';
 import { PoliticaFormComponent } from '../../components/politica-form/politica-form.component';
 import { Router } from '@angular/router';
+import { PoliticaService, PoliticaNegocio } from '../../../../core/services/politica.service';
 
 @Component({
   selector: 'app-politica-list',
@@ -14,33 +15,28 @@ export class PoliticaListComponent implements OnInit {
   politicas = signal<Politica[]>([]);
   showCreateModal = signal(false);
 
-  constructor(private router: Router) {}
+  private router = inject(Router);
+  private politicaService = inject(PoliticaService);
 
   ngOnInit() {
-    // Datos de ejemplo basados en el contexto del usuario
-    this.politicas.set([
-      {
-        id: 'pol_1',
-        nombre: 'Política de Compras Mayoristas',
-        descripcion: 'Reglas para el procesamiento de pedidos superiores a 1000 unidades.',
-        estado: 'publicado',
-        colaboradores: [
-          { usuario: { nombre: 'Edberto Sanchez' } },
-          { usuario: { nombre: 'Juan Perez' } }
-        ],
-        updated_at: '2026-04-08T12:00:00Z'
+    this.loadPoliticas();
+  }
+
+  private loadPoliticas(): void {
+    this.politicaService.getAll().subscribe({
+      next: (data: PoliticaNegocio[]) => {
+        const mapped: Politica[] = data.map(p => ({
+          id: p.id!,
+          nombre: p.nombre,
+          descripcion: p.descripcion || '',
+          estado: 'activo',
+          colaboradores: [],
+          updated_at: p.updatedAt || p.createdAt || ''
+        }));
+        this.politicas.set(mapped);
       },
-      {
-        id: 'pol_2',
-        nombre: 'Validación de Crédito Cliente',
-        descripcion: 'Flujo de aprobación para nuevas solicitudes de crédito.',
-        estado: 'borrador',
-        colaboradores: [
-          { usuario: { nombre: 'Maria Lopez' } }
-        ],
-        updated_at: '2026-04-08T15:30:00Z'
-      }
-    ]);
+      error: (err) => console.error('Error cargando políticas:', err)
+    });
   }
 
   openCreateModal() {
@@ -48,20 +44,30 @@ export class PoliticaListComponent implements OnInit {
   }
 
   handleCreate(formData: any) {
-    console.log('Creando política:', formData);
-    this.showCreateModal.set(false);
-    // Simular que después de crear se va al editor del diagrama
-    this.router.navigate(['/politicas/diagrama', 99]); 
+    const politica: PoliticaNegocio = {
+      nombre: formData.nombre,
+      descripcion: formData.descripcion || '',
+    };
+    this.politicaService.create(politica).subscribe({
+      next: (created) => {
+        this.showCreateModal.set(false);
+        this.router.navigate(['/politicas/diagrama', created.id]);
+      },
+      error: (err) => console.error('Error creando política:', err)
+    });
   }
 
   handleEliminar(politica: Politica) {
     if (confirm(`¿Estás seguro de eliminar la política "${politica.nombre}"?`)) {
-      this.politicas.update(list => list.filter(p => p.id !== politica.id));
+      this.politicaService.softDelete(politica.id).subscribe({
+        next: () => this.politicas.update(list => list.filter(p => p.id !== politica.id)),
+        error: (err) => console.error('Error eliminando:', err)
+      });
     }
   }
 
   handleGestionarColaboradores(politica: Politica) {
-    console.log('Gestionando colaboradores para:', politica.nombre);
-    // Aquí se abriría otro modal similar al de Vue
+    // Navegar al editor del diagrama
+    this.router.navigate(['/politicas/diagrama', politica.id]);
   }
 }

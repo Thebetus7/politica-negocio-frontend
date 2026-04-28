@@ -1,0 +1,359 @@
+/* ═══════════════════════════════════════════ */
+/*   Workflow Editor — Dark Theme n8n-style    */
+/* ═══════════════════════════════════════════ */
+
+:host {
+  display: block;
+  height: 100vh;
+  font-family: 'Inter', sans-serif;
+  background: #0f0f23;
+  color: #e2e8f0;
+}
+
+/* ─── HEADER ─── */
+.workflow-container {
+  display: flex;
+  flex-direction: column;
+  height: 100vh;
+  overflow: hidden;
+}
+
+.wf-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 12px 20px;
+  background: linear-gradient(135deg, #1a1a3e 0%, #0f0f23 100%);
+  border-bottom: 1px solid #2a2a5a;
+  flex-shrink: 0;
+  z-index: 10;
+}
+
+.wf-header-left {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+}
+
+.wf-header-left h2 {
+  margin: 0;
+  font-size: 1.1rem;
+  font-weight: 600;
+  color: #c7d2fe;
+}
+
+.btn-back {
+  background: transparent;
+  border: 1px solid #3b3b6d;
+  color: #94a3b8;
+  padding: 6px 14px;
+  border-radius: 8px;
+  font-size: 0.85rem;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.btn-back:hover {
+  background: #1e1e3a;
+  color: #e2e8f0;
+  border-color: #6366f1;
+}
+
+.wf-header-right {
+  display: flex;
+  gap: 10px;
+}
+
+.btn-save {
+  background: linear-gradient(135deg, #6366f1, #8b5cf6);
+  color: white;
+  border: none;
+  padding: 8px 20px;
+  border-radius: 8px;
+  font-size: 0.85rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s;
+  box-shadow: 0 2px 8px rgba(99, 102, 241, 0.3);
+}
+
+.btn-save:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 4px 16px rgba(99, 102, 241, 0.5);
+}
+
+/* ─── BODY LAYOUT ─── */
+.wf-body {
+  display: flex;
+  flex: 1;
+  overflow: hidden;
+  position: relative;
+}
+
+/* ─── TOOLBAR ─── */
+.wf-toolbar {
+  width: 150px;
+  background: #12122a;
+  border-right: 1px solid #2a2a5a;
+  padding: 12px 8px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  overflow-y: auto;
+  flex-shrink: 0;
+}
+
+.toolbar-section {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.toolbar-label {
+  font-size: 0.65rem;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  color: #64748b;
+  padding: 4px 6px 2px;
+  font-weight: 600;
+}
+
+.tool-btn {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  background: transparent;
+  border: 1px solid transparent;
+  color: #94a3b8;
+  padding: 6px 8px;
+  border-radius: 8px;
+  font-size: 0.75rem;
+  cursor: pointer;
+  transition: all 0.2s;
+  white-space: nowrap;
+}
+
+.tool-btn:hover {
+  background: #1e1e3a;
+  border-color: #3b3b6d;
+  color: #e2e8f0;
+}
+
+.tool-btn.active {
+  background: #1e1e4a;
+  border-color: #6366f1;
+  color: #c7d2fe;
+}
+
+.tool-btn.danger:hover {
+  background: rgba(239, 68, 68, 0.15);
+  border-color: #ef4444;
+  color: #f87171;
+}
+
+.tool-btn:disabled {
+  opacity: 0.3;
+  cursor: not-allowed;
+}
+
+.tool-icon {
+  font-size: 1rem;
+  min-width: 18px;
+  text-align: center;
+}
+
+.tool-text {
+  font-size: 0.7rem;
+}
+
+/* ─── CANVAS ─── */
+.wf-canvas-wrapper {
+  flex: 1;
+  overflow: hidden;
+  background: #0f0f23;
+  position: relative;
+}
+
+.wf-canvas {
+  width: 100%;
+  height: 100%;
+  cursor: default;
+  background: #0f0f23;
+}
+
+/* ─── NODES ─── */
+.node-group {
+  cursor: grab;
+  transition: filter 0.15s;
+}
+
+.node-group:hover .node-shape {
+  opacity: 0.9;
+}
+
+.node-group.selected .node-shape {
+  stroke: #fbbf24 !important;
+}
+
+.node-delete-btn {
+  cursor: pointer;
+  opacity: 0;
+  transition: opacity 0.15s;
+}
+
+.node-group:hover .node-delete-btn {
+  opacity: 1;
+}
+
+.node-delete-btn circle {
+  transition: fill 0.15s;
+}
+
+.node-delete-btn:hover circle {
+  fill: #b91c1c !important;
+}
+
+.node-group:active {
+  cursor: grabbing;
+}
+
+/* ─── PORTS ─── */
+.port {
+  cursor: crosshair;
+  transition: all 0.15s;
+  opacity: 0;
+}
+
+.node-group:hover .port {
+  opacity: 1;
+}
+
+.port:hover {
+  fill: #6366f1 !important;
+  stroke: #c7d2fe !important;
+  r: 9;
+}
+
+/* ─── LINKS ─── */
+.link-path {
+  cursor: pointer;
+  transition: stroke-width 0.15s;
+}
+
+.link-path:hover {
+  stroke-width: 4;
+}
+
+.link-path.selected {
+  stroke-width: 4;
+  stroke-dasharray: 8,4;
+  animation: link-flow 0.5s linear infinite;
+}
+
+@keyframes link-flow {
+  to { stroke-dashoffset: -12; }
+}
+
+.link-label {
+  pointer-events: none;
+}
+
+/* ─── PROPERTIES PANEL ─── */
+.wf-properties {
+  position: absolute;
+  top: 0;
+  right: 0;
+  bottom: 0;
+  width: 280px;
+  background: rgba(18, 18, 42, 0.95);
+  backdrop-filter: blur(8px);
+  border-left: 1px solid #2a2a5a;
+  padding: 20px 16px;
+  overflow-y: auto;
+  z-index: 50;
+  box-shadow: -4px 0 15px rgba(0,0,0,0.4);
+}
+
+.wf-properties h3 {
+  margin: 0 0 16px;
+  font-size: 0.95rem;
+  font-weight: 600;
+  color: #c7d2fe;
+  border-bottom: 1px solid #2a2a5a;
+  padding-bottom: 10px;
+}
+
+.prop-group {
+  margin-bottom: 14px;
+}
+
+.prop-group label {
+  display: block;
+  font-size: 0.7rem;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  color: #64748b;
+  margin-bottom: 4px;
+  font-weight: 600;
+}
+
+.prop-group input,
+.prop-group select {
+  width: 100%;
+  background: #1a1a3e;
+  border: 1px solid #2a2a5a;
+  color: #e2e8f0;
+  padding: 8px 10px;
+  border-radius: 6px;
+  font-size: 0.85rem;
+  font-family: 'Inter', sans-serif;
+  transition: border-color 0.2s;
+  box-sizing: border-box;
+}
+
+.prop-group input:focus,
+.prop-group select:focus {
+  outline: none;
+  border-color: #6366f1;
+  box-shadow: 0 0 0 2px rgba(99, 102, 241, 0.2);
+}
+
+.prop-value {
+  font-size: 0.8rem;
+  color: #94a3b8;
+}
+
+.btn-delete {
+  width: 100%;
+  margin-top: 16px;
+  background: rgba(239, 68, 68, 0.1);
+  border: 1px solid #7f1d1d;
+  color: #f87171;
+  padding: 8px;
+  border-radius: 8px;
+  font-size: 0.8rem;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.btn-delete:hover {
+  background: rgba(239, 68, 68, 0.25);
+  border-color: #ef4444;
+}
+
+/* ─── Scrollbar ─── */
+.wf-toolbar::-webkit-scrollbar,
+.wf-properties::-webkit-scrollbar {
+  width: 4px;
+}
+
+.wf-toolbar::-webkit-scrollbar-track,
+.wf-properties::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.wf-toolbar::-webkit-scrollbar-thumb,
+.wf-properties::-webkit-scrollbar-thumb {
+  background: #2a2a5a;
+  border-radius: 4px;
+}

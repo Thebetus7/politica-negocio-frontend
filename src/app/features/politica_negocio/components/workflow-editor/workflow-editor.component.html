@@ -1,0 +1,401 @@
+<div class="workflow-container">
+  <!-- ══════ HEADER ══════ -->
+  <div class="wf-header">
+    <div class="wf-header-left">
+      <button class="btn-back" (click)="goBack()">← Volver</button>
+      <h2>{{ politicaNombre || 'Diagrama de Actividades' }}</h2>
+    </div>
+    <div class="wf-header-right">
+      <button class="btn-save" (click)="saveDiagram()">💾 Guardar</button>
+    </div>
+  </div>
+
+  <div class="wf-body">
+    <!-- ══════ TOOLBAR LATERAL ══════ -->
+    <div class="wf-toolbar">
+      <div class="toolbar-section">
+        <span class="toolbar-label">Nodos</span>
+        <button class="tool-btn" (click)="addNode('inicio')" title="Inicio">
+          <span class="tool-icon" style="color:#22c55e">▶</span>
+          <span class="tool-text">Inicio</span>
+        </button>
+        <button class="tool-btn" (click)="addNode('actividad')" title="Actividad">
+          <span class="tool-icon" style="color:#6366f1">📋</span>
+          <span class="tool-text">Actividad</span>
+        </button>
+        <button class="tool-btn" (click)="addNode('decision')" title="Decisión">
+          <span class="tool-icon" style="color:#f59e0b">◇</span>
+          <span class="tool-text">Decisión</span>
+        </button>
+        <button class="tool-btn" (click)="addNode('while_do')" title="While-Do">
+          <span class="tool-icon" style="color:#10b981">↻W</span>
+          <span class="tool-text">While-Do</span>
+        </button>
+        <button class="tool-btn" (click)="addNode('do_while')" title="Do-While">
+          <span class="tool-icon" style="color:#06b6d4">↻D</span>
+          <span class="tool-text">Do-While</span>
+        </button>
+        <button class="tool-btn" (click)="addNode('fork')" title="Fork">
+          <span class="tool-icon" style="color:#8b5cf6">‖F</span>
+          <span class="tool-text">Fork</span>
+        </button>
+        <button class="tool-btn" (click)="addNode('join')" title="Join">
+          <span class="tool-icon" style="color:#8b5cf6">‖J</span>
+          <span class="tool-text">Join</span>
+        </button>
+        <button class="tool-btn" (click)="addNode('fin')" title="Fin">
+          <span class="tool-icon" style="color:#ef4444">⬛</span>
+          <span class="tool-text">Fin</span>
+        </button>
+      </div>
+
+      <div class="toolbar-section">
+        <span class="toolbar-label">Conexión</span>
+        <button class="tool-btn" [class.active]="connectionType === 'secuencial'"
+                (click)="setConnectionType('secuencial')" title="Secuencial">
+          <span class="tool-icon" style="color:#3b82f6">→</span>
+          <span class="tool-text">Secuencial</span>
+        </button>
+        <button class="tool-btn" [class.active]="connectionType === 'alternativo'"
+                (click)="setConnectionType('alternativo')" title="Alternativo">
+          <span class="tool-icon" style="color:#f59e0b">◇→</span>
+          <span class="tool-text">Alternativo</span>
+        </button>
+        <button class="tool-btn" [class.active]="connectionType === 'iterativo_while'"
+                (click)="setConnectionType('iterativo_while')" title="Iterativo While">
+          <span class="tool-icon" style="color:#10b981">↻</span>
+          <span class="tool-text">Iterativo</span>
+        </button>
+        <button class="tool-btn" [class.active]="connectionType === 'paralelo'"
+                (click)="setConnectionType('paralelo')" title="Paralelo">
+          <span class="tool-icon" style="color:#8b5cf6">‖</span>
+          <span class="tool-text">Paralelo</span>
+        </button>
+      </div>
+
+      <div class="toolbar-section">
+        <span class="toolbar-label">Acciones</span>
+        <button class="tool-btn danger" (click)="deleteSelected()" title="Eliminar selección"
+                [disabled]="!selectedNode() && !selectedLink()">
+          <span class="tool-icon">🗑</span>
+          <span class="tool-text">Eliminar</span>
+        </button>
+      </div>
+    </div>
+
+    <!-- ══════ SVG CANVAS ══════ -->
+    <div class="wf-canvas-wrapper" (contextmenu)="onContextMenu($event)">
+      <svg #svgCanvas
+           class="wf-canvas"
+           [attr.viewBox]="getViewBoxString()"
+           (mousedown)="onSvgMouseDown($event)"
+           (mousemove)="onSvgMouseMove($event)"
+           (mouseup)="onSvgMouseUp($event)"
+           (wheel)="onSvgWheel($event)"
+           (click)="onCanvasClick()">
+
+        <!-- Defs: Arrow markers & filters -->
+        <defs>
+          <marker id="arrowhead" markerWidth="10" markerHeight="7" refX="10" refY="3.5" orient="auto">
+            <polygon points="0 0, 10 3.5, 0 7" fill="#94a3b8"/>
+          </marker>
+          <marker id="arrowhead-blue" markerWidth="10" markerHeight="7" refX="10" refY="3.5" orient="auto">
+            <polygon points="0 0, 10 3.5, 0 7" fill="#3b82f6"/>
+          </marker>
+          <marker id="arrowhead-amber" markerWidth="10" markerHeight="7" refX="10" refY="3.5" orient="auto">
+            <polygon points="0 0, 10 3.5, 0 7" fill="#f59e0b"/>
+          </marker>
+          <marker id="arrowhead-green" markerWidth="10" markerHeight="7" refX="10" refY="3.5" orient="auto">
+            <polygon points="0 0, 10 3.5, 0 7" fill="#10b981"/>
+          </marker>
+          <marker id="arrowhead-violet" markerWidth="10" markerHeight="7" refX="10" refY="3.5" orient="auto">
+            <polygon points="0 0, 10 3.5, 0 7" fill="#8b5cf6"/>
+          </marker>
+          <filter id="node-shadow" x="-10%" y="-10%" width="130%" height="130%">
+            <feDropShadow dx="2" dy="4" stdDeviation="4" flood-color="#000" flood-opacity="0.4"/>
+          </filter>
+          <!-- Grid pattern -->
+          <pattern id="grid" width="20" height="20" patternUnits="userSpaceOnUse">
+            <circle cx="10" cy="10" r="1" fill="#2a2a4a" opacity="0.5"/>
+          </pattern>
+        </defs>
+
+        <!-- Background grid -->
+        <rect width="100%" height="100%" fill="url(#grid)"/>
+
+        <!-- ── SWIM LANES (Departamentos) ── -->
+        @for (depa of departamentos(); track trackByDepa($index, depa)) {
+          <g>
+            <!-- Lane background -->
+            <rect [attr.x]="getLaneX($index)" [attr.y]="0"
+                  [attr.width]="laneWidth" [attr.height]="canvasHeight"
+                  fill="#1e1e3a" stroke="#2a2a5a" stroke-width="1" opacity="0.5"/>
+            <!-- Lane header -->
+            <rect [attr.x]="getLaneX($index)" [attr.y]="0"
+                  [attr.width]="laneWidth" [attr.height]="laneHeaderHeight"
+                  [attr.fill]="getLaneColor($index)" opacity="0.85" rx="0"/>
+            <text [attr.x]="getLaneX($index) + laneWidth / 2" [attr.y]="30"
+                  text-anchor="middle" fill="white" font-size="14" font-weight="600"
+                  font-family="Inter, sans-serif">
+              {{ depa.nombre }}
+            </text>
+          </g>
+        }
+
+        <!-- ── LINKS (Conexiones) ── -->
+        @for (link of links(); track trackByLink($index, link)) {
+          <g (click)="selectLink(link); $event.stopPropagation()">
+            <path [attr.d]="getLinkPath(link)"
+                  fill="none"
+                  [attr.stroke]="getLinkColor(link.tipo)"
+                  stroke-width="2.5"
+                  [attr.marker-end]="'url(#arrowhead)'"
+                  class="link-path"
+                  [class.selected]="selectedLink() === link"/>
+            <!-- Label de la conexión -->
+            @if (link.label) {
+              <text [attr.x]="getLinkMidpoint(link).x"
+                    [attr.y]="getLinkMidpoint(link).y"
+                    text-anchor="middle" fill="#e2e8f0" font-size="11"
+                    font-family="Inter, sans-serif"
+                    class="link-label">
+                {{ link.label }}
+              </text>
+            }
+          </g>
+        }
+
+        <!-- ── Conexión temporal (al arrastrar para conectar) ── -->
+        @if (isConnecting) {
+          <line [attr.x1]="connectionLine.x1" [attr.y1]="connectionLine.y1"
+                [attr.x2]="connectionLine.x2" [attr.y2]="connectionLine.y2"
+                stroke="#94a3b8" stroke-width="2" stroke-dasharray="6,3"
+                marker-end="url(#arrowhead)"/>
+        }
+
+        <!-- ── NODOS ── -->
+        @for (node of nodes(); track trackByNode($index, node)) {
+          <g [attr.transform]="'translate(' + node.x + ',' + node.y + ')'"
+             (mousedown)="onNodeMouseDown($event, node)"
+             (contextmenu)="onNodeContextMenu($event, node)"
+             class="node-group"
+             [class.selected]="selectedNode() === node">
+
+            <!-- Forma según tipo -->
+            @switch (node.tipo) {
+              @case ('actividad') {
+                <!-- Rectángulo redondeado -->
+                <rect [attr.width]="node.width" [attr.height]="node.height"
+                      rx="12" ry="12"
+                      [attr.fill]="getNodeColor(node.tipo)"
+                      stroke="#818cf8" stroke-width="2"
+                      filter="url(#node-shadow)"
+                      class="node-shape"/>
+                <text [attr.x]="node.width / 2" y="25" text-anchor="middle"
+                      fill="white" font-size="13" font-weight="600"
+                      font-family="Inter, sans-serif">{{ node.nombre }}</text>
+                <line x1="15" y1="38" [attr.x2]="node.width - 15" y2="38" stroke="rgba(255,255,255,0.3)" stroke-width="1"/>
+                @if (node.formularioNombre) {
+                  <text [attr.x]="15" y="56" fill="#c7d2fe" font-size="11"
+                        font-family="Inter, sans-serif">📄 {{ node.formularioNombre }}</text>
+                }
+                @if (node.funcionarioNombre) {
+                  <text [attr.x]="15" y="74" fill="#c7d2fe" font-size="11"
+                        font-family="Inter, sans-serif">👤 {{ node.funcionarioNombre }}</text>
+                }
+              }
+
+              @case ('decision') {
+                <!-- Diamante -->
+                <polygon [attr.points]="node.width/2+',0 '+node.width+','+node.height/2+' '+node.width/2+','+node.height+' 0,'+node.height/2"
+                         [attr.fill]="getNodeColor(node.tipo)"
+                         stroke="#fbbf24" stroke-width="2"
+                         filter="url(#node-shadow)"
+                         class="node-shape"/>
+                <text [attr.x]="node.width / 2" [attr.y]="node.height / 2 + 5"
+                      text-anchor="middle" fill="white" font-size="12" font-weight="600"
+                      font-family="Inter, sans-serif">{{ node.nombre }}</text>
+              }
+
+              @case ('while_do') {
+                <!-- Hexágono -->
+                <polygon [attr.points]="'20,0 '+(node.width-20)+',0 '+node.width+','+node.height/2+' '+(node.width-20)+','+node.height+' 20,'+node.height+' 0,'+node.height/2"
+                         [attr.fill]="getNodeColor(node.tipo)"
+                         stroke="#34d399" stroke-width="2"
+                         filter="url(#node-shadow)"
+                         class="node-shape"/>
+                <text [attr.x]="node.width / 2" [attr.y]="node.height / 2 + 5"
+                      text-anchor="middle" fill="white" font-size="12" font-weight="600"
+                      font-family="Inter, sans-serif">↻ {{ node.nombre }}</text>
+              }
+
+              @case ('do_while') {
+                <polygon [attr.points]="'20,0 '+(node.width-20)+',0 '+node.width+','+node.height/2+' '+(node.width-20)+','+node.height+' 20,'+node.height+' 0,'+node.height/2"
+                         [attr.fill]="getNodeColor(node.tipo)"
+                         stroke="#22d3ee" stroke-width="2"
+                         filter="url(#node-shadow)"
+                         class="node-shape"/>
+                <text [attr.x]="node.width / 2" [attr.y]="node.height / 2 + 5"
+                      text-anchor="middle" fill="white" font-size="12" font-weight="600"
+                      font-family="Inter, sans-serif">↻ {{ node.nombre }}</text>
+              }
+
+              @case ('fork') {
+                <rect [attr.width]="node.width" [attr.height]="node.height"
+                      rx="4" [attr.fill]="getNodeColor(node.tipo)"
+                      stroke="#a78bfa" stroke-width="2"
+                      filter="url(#node-shadow)" class="node-shape"/>
+                <text [attr.x]="node.width / 2" [attr.y]="node.height / 2 + 5"
+                      text-anchor="middle" fill="white" font-size="11" font-weight="700"
+                      font-family="Inter, sans-serif">‖ FORK</text>
+              }
+
+              @case ('join') {
+                <rect [attr.width]="node.width" [attr.height]="node.height"
+                      rx="4" [attr.fill]="getNodeColor(node.tipo)"
+                      stroke="#a78bfa" stroke-width="2"
+                      filter="url(#node-shadow)" class="node-shape"/>
+                <text [attr.x]="node.width / 2" [attr.y]="node.height / 2 + 5"
+                      text-anchor="middle" fill="white" font-size="11" font-weight="700"
+                      font-family="Inter, sans-serif">‖ JOIN</text>
+              }
+
+              @case ('inicio') {
+                <circle [attr.cx]="node.width / 2" [attr.cy]="node.height / 2" [attr.r]="node.width / 2"
+                        [attr.fill]="getNodeColor(node.tipo)"
+                        stroke="#4ade80" stroke-width="3"
+                        filter="url(#node-shadow)" class="node-shape"/>
+                <text [attr.x]="node.width / 2" [attr.y]="node.height / 2 + 5"
+                      text-anchor="middle" fill="white" font-size="14" font-weight="700"
+                      font-family="Inter, sans-serif">▶</text>
+              }
+
+              @case ('fin') {
+                <circle [attr.cx]="node.width / 2" [attr.cy]="node.height / 2" [attr.r]="node.width / 2"
+                        [attr.fill]="getNodeColor(node.tipo)"
+                        stroke="#f87171" stroke-width="3"
+                        filter="url(#node-shadow)" class="node-shape"/>
+                <circle [attr.cx]="node.width / 2" [attr.cy]="node.height / 2" [attr.r]="node.width / 2 - 6"
+                        fill="none" stroke="white" stroke-width="2"/>
+                <text [attr.x]="node.width / 2" [attr.y]="node.height / 2 + 5"
+                      text-anchor="middle" fill="white" font-size="12" font-weight="700"
+                      font-family="Inter, sans-serif">FIN</text>
+              }
+            }
+
+            <!-- Puerto de entrada (izquierda) -->
+            <circle cx="0" [attr.cy]="node.height / 2" r="7"
+                    fill="#1e293b" stroke="#94a3b8" stroke-width="2"
+                    class="port port-in"
+                    (mouseup)="endConnection(node); $event.stopPropagation()"/>
+
+            <!-- Puerto de salida (derecha) -->
+            <circle [attr.cx]="node.width" [attr.cy]="node.height / 2" r="7"
+                    fill="#1e293b" stroke="#94a3b8" stroke-width="2"
+                    class="port port-out"
+                    (mousedown)="startConnection(node, $event)"/>
+
+            <!-- Botón de eliminación -->
+            <g class="node-delete-btn" (click)="deleteNode(node, $event)" (mousedown)="$event.stopPropagation()" [attr.transform]="'translate(' + (node.width - 5) + ', -5)'">
+              <circle cx="8" cy="8" r="10" fill="#ef4444" stroke="#7f1d1d" stroke-width="1"/>
+              <text x="8" y="12" fill="white" font-size="12" font-weight="bold" text-anchor="middle" font-family="sans-serif">✕</text>
+            </g>
+          </g>
+        }
+
+        <!-- ── CURSORES REMOTOS ── -->
+        @for (cursor of remoteCursors(); track cursor.userId) {
+          <g [attr.transform]="'translate(' + cursor.x + ',' + cursor.y + ')'">
+            <polygon points="0,0 0,18 5,14 9,20 12,18 8,12 14,12"
+                     [attr.fill]="cursor.color" stroke="white" stroke-width="1"/>
+            <rect x="16" y="12" width="60" height="18" rx="4"
+                  [attr.fill]="cursor.color" opacity="0.9"/>
+            <text x="20" y="25" fill="white" font-size="10" font-family="Inter, sans-serif">
+              {{ cursor.nombre }}
+            </text>
+          </g>
+        }
+      </svg>
+    </div>
+
+    <!-- ══════ PANEL DE PROPIEDADES (DERECHO) ══════ -->
+    @if (showPropertiesPanel()) {
+      <div class="wf-properties">
+        @if (selectedNode(); as node) {
+          <h3>{{ getNodeIcon(node.tipo) }} {{ node.tipo | titlecase }}</h3>
+
+          <div class="prop-group">
+            <label>Nombre</label>
+            <input type="text" [(ngModel)]="editNodeName" (ngModelChange)="updateNodeProperties(false)" (blur)="updateNodeProperties(true)"/>
+          </div>
+
+          @if (node.tipo === 'actividad') {
+            <div class="prop-group">
+              <label>📄 Formulario</label>
+              <select [(ngModel)]="editNodeFormId" (change)="updateNodeProperties(true)">
+                <option value="">Sin formulario</option>
+                @for (f of formularios(); track f.id) {
+                  <option [value]="f.id">{{ f.nombre }}</option>
+                }
+              </select>
+            </div>
+
+            <div class="prop-group">
+              <label>👤 Funcionario</label>
+              <select [(ngModel)]="editNodeFuncId" (change)="updateNodeProperties(true)">
+                <option value="">Sin asignar</option>
+                @for (func of getFuncionariosForSelectedNode(); track func.id) {
+                  <option [value]="func.userId">{{ func.userId }}</option>
+                }
+              </select>
+            </div>
+          }
+
+          <div class="prop-group">
+            <label>Departamento</label>
+            <select [(ngModel)]="editNodeDepaId" (change)="onDepartmentChange($event)" style="width: 100%; padding: 0.5rem; background: #1e293b; color: white; border: 1px solid #334155; border-radius: 4px; font-family: Inter, sans-serif;">
+              @for (depa of departamentos(); track depa.id) {
+                <option [value]="depa.id">{{ depa.nombre }}</option>
+              }
+            </select>
+          </div>
+
+          <div class="prop-group">
+            <label>Posición</label>
+            <span class="prop-value">X: {{ node.x | number:'1.0-0' }} Y: {{ node.y | number:'1.0-0' }}</span>
+          </div>
+
+          <button class="btn-delete" (click)="deleteSelected()">🗑 Eliminar nodo</button>
+        }
+
+        @if (selectedLink(); as link) {
+          <h3>Conexión</h3>
+
+          <div class="prop-group">
+            <label>Tipo de ruta</label>
+            <select [(ngModel)]="link.tipo" (change)="updateLinkProperties()">
+              <option value="secuencial">Secuencial →</option>
+              <option value="alternativo">Alternativo ◇→</option>
+              <option value="iterativo_while">Iterativo ↻</option>
+              <option value="iterativo_dowhile">Iterativo Do-While ↻</option>
+              <option value="paralelo">Paralelo ‖</option>
+            </select>
+          </div>
+
+          @if (link.tipo === 'alternativo') {
+            <div class="prop-group">
+              <label>Etiqueta</label>
+              <input type="text" [(ngModel)]="link.label" (blur)="updateLinkProperties()"/>
+            </div>
+            <div class="prop-group">
+              <label>Condición</label>
+              <input type="text" [(ngModel)]="link.condicion" (blur)="updateLinkProperties()"/>
+            </div>
+          }
+
+          <button class="btn-delete" (click)="deleteSelected()">🗑 Eliminar conexión</button>
+        }
+      </div>
+    }
+  </div>
+</div>
