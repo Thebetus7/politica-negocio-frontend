@@ -21,19 +21,92 @@
         </button>
         <button class="tool-btn" (click)="addNode('actividad')" title="Actividad">
           <span class="tool-icon" style="color:#6366f1">📋</span>
-          <span class="tool-text">Actividad</span>
+          <span class="tool-text">Actividad/Action</span>
         </button>
         <button class="tool-btn" (click)="addNode('decision')" title="Decisión">
           <span class="tool-icon" style="color:#f59e0b">◇</span>
-          <span class="tool-text">Decisión</span>
+          <span class="tool-text">Decisión/Merge</span>
         </button>
         <button class="tool-btn" (click)="addNode('pregunta')" title="Pregunta (Iterativo)">
           <span class="tool-icon" style="color:#10b981">?</span>
           <span class="tool-text">Pregunta</span>
         </button>
+        <button class="tool-btn" (click)="addNode('time_event')" title="Evento de Tiempo (UML)">
+          <span class="tool-icon">
+            <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
+              <path d="M4 2H12L8 8L12 14H4L8 8L4 2Z" stroke="#64748b" stroke-width="1.5"/>
+            </svg>
+          </span>
+          <span class="tool-text">Espera</span>
+        </button>
         <button class="tool-btn" (click)="addNode('fin')" title="Fin">
           <span class="tool-icon" style="color:#ef4444">⬛</span>
           <span class="tool-text">Fin</span>
+        </button>
+      </div>
+
+      <div class="toolbar-section">
+        <span class="toolbar-label">Datos (NUEVO)</span>
+        <button class="tool-btn" (click)="addNode('object')" title="Objeto (Cuadrado)">
+          <span class="tool-icon">
+            <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
+              <rect x="2" y="2" width="12" height="12" stroke="#f59e0b" stroke-width="2" rx="0"/>
+            </svg>
+          </span>
+          <span class="tool-text">Objeto</span>
+        </button>
+        <button class="tool-btn" (click)="addNode('datastore')" title="Data Store">
+          <span class="tool-icon">
+            <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
+              <rect x="2" y="3" width="12" height="10" stroke="#d97706" stroke-width="2" rx="0"/>
+              <line x1="2" y1="8" x2="14" y2="8" stroke="#d97706" stroke-width="2"/>
+            </svg>
+          </span>
+          <span class="tool-text">Data Store</span>
+        </button>
+      </div>
+
+      <div class="toolbar-section">
+        <span class="toolbar-label">Símbolos</span>
+        <button class="tool-btn" (click)="addNode('send')" title="Enviar">
+          <span class="tool-icon" style="color:#0ea5e9">✉️</span>
+          <span class="tool-text">Send</span>
+        </button>
+        <button class="tool-btn" (click)="addNode('receive')" title="Recibir">
+          <span class="tool-icon" style="color:#22d3ee">📥</span>
+          <span class="tool-text">Receive</span>
+        </button>
+        <button class="tool-btn" (click)="addNode('synch')" title="Sincronizar">
+          <span class="tool-icon" style="color:#8b5cf6">🔄</span>
+          <span class="tool-text">Synch</span>
+        </button>
+        <button class="tool-btn" (click)="addNode('flow_final')" title="Flujo Final">
+          <span class="tool-icon" style="color:#f97316">🔚</span>
+          <span class="tool-text">Flow Final</span>
+        </button>
+        <button class="tool-btn" (click)="addNode('region')" title="Región">
+          <span class="tool-icon" style="color:#0f766e">📍</span>
+          <span class="tool-text">Region</span>
+        </button>
+        <button class="tool-btn" (click)="addNode('excepcion')" title="Excepción">
+          <span class="tool-icon" style="color:#ef4444">⚠️</span>
+          <span class="tool-text">Excepción</span>
+        </button>
+        <button class="tool-btn" (click)="addNode('structured_activity')" title="Actividad Estructurada">
+          <span class="tool-icon" style="color:#f97316">🔄</span>
+          <span class="tool-text">Estructurada</span>
+        </button>
+      </div>
+
+      <div class="toolbar-section">
+        <span class="toolbar-label">Barras (Fork/Join)</span>
+        <button class="tool-btn" (click)="addNode('fork_horizontal')" title="Barra Horizontal">
+          <span class="tool-icon" style="color:#94a3b8">▬</span>
+          <span class="tool-text">Barra H</span>
+        </button>
+        <button class="tool-btn" (click)="addNode('fork_vertical')" title="Barra Vertical">
+          <span class="tool-icon" style="color:#94a3b8">┃</span>
+          <span class="tool-text">Barra V</span>
         </button>
       </div>
 
@@ -43,6 +116,19 @@
           <div><strong>Shift + arrastrar</strong></div>
           <div>desde un nodo → suelta sobre otro</div>
         </div>
+      </div>
+
+      <div class="toolbar-section">
+        <span class="toolbar-label">Anotaciones</span>
+        <button class="tool-btn" (click)="addNode('comment')" title="Nota / Comentario">
+          <span class="tool-icon">
+            <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
+              <path d="M3 2H10L13 5V14H3V2Z" stroke="#eab308" stroke-width="1.5"/>
+              <path d="M10 2V5H13" stroke="#eab308" stroke-width="1.5"/>
+            </svg>
+          </span>
+          <span class="tool-text">Nota</span>
+        </button>
       </div>
 
       <div class="toolbar-section">
@@ -56,10 +142,16 @@
     </div>
 
     <!-- ══════ SVG CANVAS ══════ -->
-    <div class="wf-canvas-wrapper" (contextmenu)="onContextMenu($event)">
+    <div #canvasWrapper class="wf-canvas-wrapper"
+         (contextmenu)="onContextMenu($event)"
+         (scroll)="onWrapperScroll($event)">
+      <div class="wf-canvas-spacer"
+           [style.width.px]="worldWidth() * zoom"
+           [style.height.px]="worldHeight() * zoom"></div>
       <svg #svgCanvas
            class="wf-canvas"
            [attr.viewBox]="getViewBoxString()"
+           [style.cursor]="getCanvasCursor()"
            (mousedown)="onSvgMouseDown($event)"
            (mousemove)="onSvgMouseMove($event)"
            (mouseup)="onSvgMouseUp($event)"
@@ -100,13 +192,13 @@
           <g>
             <!-- Lane background -->
             <rect [attr.x]="getLaneX($index)" [attr.y]="0"
-                  [attr.width]="laneWidth" [attr.height]="canvasHeight"
+                  [attr.width]="getLaneWidth($index)" [attr.height]="canvasHeight"
                   fill="#1e1e3a" stroke="#2a2a5a" stroke-width="1" opacity="0.5"/>
             <!-- Lane header -->
             <rect [attr.x]="getLaneX($index)" [attr.y]="0"
-                  [attr.width]="laneWidth" [attr.height]="laneHeaderHeight"
+                  [attr.width]="getLaneWidth($index)" [attr.height]="laneHeaderHeight"
                   [attr.fill]="getLaneColor($index)" opacity="0.85" rx="0"/>
-            <text [attr.x]="getLaneX($index) + laneWidth / 2" [attr.y]="30"
+            <text [attr.x]="getLaneX($index) + getLaneWidth($index) / 2" [attr.y]="30"
                   text-anchor="middle" fill="white" font-size="14" font-weight="600"
                   font-family="Inter, sans-serif">
               {{ depa.nombre }}
@@ -157,7 +249,6 @@
             <!-- Forma según tipo -->
             @switch (node.tipo) {
               @case ('actividad') {
-                <!-- Rectángulo redondeado -->
                 <rect [attr.width]="node.width" [attr.height]="node.height"
                       rx="12" ry="12"
                       [attr.fill]="getNodeColor(node.tipo)"
@@ -179,7 +270,6 @@
               }
 
               @case ('decision') {
-                <!-- Diamante -->
                 <polygon [attr.points]="node.width/2+',0 '+node.width+','+node.height/2+' '+node.width/2+','+node.height+' 0,'+node.height/2"
                          [attr.fill]="getNodeColor(node.tipo)"
                          stroke="#fbbf24" stroke-width="2"
@@ -191,7 +281,6 @@
               }
 
               @case ('pregunta') {
-                <!-- Hexágono / pregunta iterativa -->
                 <polygon [attr.points]="'20,0 '+(node.width-20)+',0 '+node.width+','+node.height/2+' '+(node.width-20)+','+node.height+' 20,'+node.height+' 0,'+node.height/2"
                          [attr.fill]="getNodeColor(node.tipo)"
                          stroke="#34d399" stroke-width="2"
@@ -202,26 +291,225 @@
                       font-family="Inter, sans-serif">? {{ node.nombre }}</text>
               }
 
-              @case ('inicio') {
-                <circle [attr.cx]="node.width / 2" [attr.cy]="node.height / 2" [attr.r]="node.width / 2"
+              @case ('send') {
+                <polygon [attr.points]="'0,0 ' + (node.width - 20) + ',0 ' + node.width + ',' + (node.height / 2) + ' ' + (node.width - 20) + ',' + node.height + ' 0,' + node.height"
+                         [attr.fill]="getNodeColor(node.tipo)"
+                         stroke="#38bdf8" stroke-width="2"
+                         filter="url(#node-shadow)"
+                         class="node-shape"/>
+                <text [attr.x]="node.width / 2 - 10" [attr.y]="node.height / 2 + 5"
+                      text-anchor="middle" fill="white" font-size="13" font-weight="700"
+                      font-family="Inter, sans-serif">{{ node.nombre }}</text>
+              }
+
+              @case ('receive') {
+                <polygon [attr.points]="'0,0 ' + node.width + ',0 ' + node.width + ',' + node.height + ' 0,' + node.height + ' 25,' + (node.height / 2)"
+                         [attr.fill]="getNodeColor(node.tipo)"
+                         stroke="#1e293b" stroke-width="3"
+                         filter="url(#node-shadow)"
+                         class="node-shape"/>
+                <text [attr.x]="node.width / 2 + 10" [attr.y]="node.height / 2 + 5"
+                      text-anchor="middle" fill="#0f172a" font-size="13" font-weight="700"
+                      font-family="Inter, sans-serif">{{ node.nombre }}</text>
+              }
+
+              @case ('synch') {
+                <circle [attr.cx]="node.width / 2" [attr.cy]="node.height / 2" [attr.r]="node.width / 2 - 2"
                         [attr.fill]="getNodeColor(node.tipo)"
-                        stroke="#4ade80" stroke-width="3"
+                        stroke="#1e293b" stroke-width="3"
+                        filter="url(#node-shadow)"
+                        class="node-shape"/>
+                <g stroke="#1e293b" stroke-width="2.5" stroke-linecap="round">
+                  <line [attr.x1]="node.width / 2" y1="10" [attr.x2]="node.width / 2" [attr.y2]="node.height - 10" />
+                  <line x1="10" [attr.y1]="node.height / 2" [attr.x2]="node.width - 10" [attr.y2]="node.height / 2" />
+                  <line x1="20" y1="20" [attr.x2]="node.width - 20" [attr.y2]="node.height - 20" />
+                  <line [attr.x1]="node.width - 20" y1="20" x2="20" [attr.y2]="node.height - 20" />
+                </g>
+                <text [attr.x]="node.width / 2" [attr.y]="node.height + 20" text-anchor="middle"
+                      fill="#e2e8f0" font-size="12" font-weight="600"
+                      font-family="Inter, sans-serif">{{ node.nombre }}</text>
+              }
+
+              @case ('flow_final') {
+                <circle [attr.cx]="node.width / 2" [attr.cy]="node.height / 2" [attr.r]="node.width / 2 - 2"
+                        [attr.fill]="getNodeColor(node.tipo)"
+                        stroke="#1e293b" stroke-width="3"
+                        filter="url(#node-shadow)"
+                        class="node-shape"/>
+                <g stroke="#1e293b" stroke-width="3" stroke-linecap="round">
+                  <line [attr.x1]="node.width * 0.25" [attr.y1]="node.height * 0.25" 
+                        [attr.x2]="node.width * 0.75" [attr.y2]="node.height * 0.75" />
+                  <line [attr.x1]="node.width * 0.75" [attr.y1]="node.height * 0.25" 
+                        [attr.x2]="node.width * 0.25" [attr.y2]="node.height * 0.75" />
+                </g>
+                <text [attr.x]="node.width / 2" [attr.y]="node.height + 20" text-anchor="middle"
+                      fill="#e2e8f0" font-size="12" font-weight="600"
+                      font-family="Inter, sans-serif">{{ node.nombre }}</text>
+              }
+
+              @case ('region') {
+                <rect [attr.width]="node.width" [attr.height]="node.height" rx="8" ry="8"
+                      fill="rgba(255, 255, 255, 0.01)"
+                      stroke="#94a3b8" stroke-width="2" stroke-dasharray="10,5"
+                      style="pointer-events: visibleStroke;"
+                      class="node-shape"/>
+                <rect x="0" y="0" [attr.width]="node.width" height="25" rx="8" ry="8" fill="rgba(148, 163, 184, 0.1)" style="pointer-events: all;"/>
+                <text x="10" y="18" text-anchor="start"
+                      fill="#94a3b8" font-size="11" font-weight="700"
+                      font-family="Inter, sans-serif" style="pointer-events: none;">REGION: {{ node.nombre }}</text>
+
+                <!-- Resizer Handle -->
+                <g [attr.transform]="'translate(' + (node.width - 30) + ',' + (node.height - 30) + ')'"
+                   style="pointer-events: all;"
+                   cursor="nwse-resize"
+                   (mousedown)="onResizeMouseDown($event, node)">
+                  <rect x="0" y="0" width="40" height="40" fill="transparent" />
+                  <path d="M 15 25 L 25 15 M 20 25 L 25 20" stroke="#94a3b8" stroke-width="3" stroke-linecap="round"/>
+                  <rect x="22" y="22" width="5" height="5" fill="#94a3b8" rx="1"/>
+                </g>
+              }
+
+              @case ('structured_activity') {
+                <!-- Contenedor Base -->
+                <rect [attr.width]="node.width" [attr.height]="node.height" rx="20" ry="20"
+                      fill="#fff7ed" stroke="#94a3b8" stroke-width="2" stroke-dasharray="5,5"
+                      filter="url(#node-shadow)" class="node-shape"
+                      style="pointer-events: visibleStroke;"/>
+                <rect x="0" y="0" [attr.width]="node.width" height="60" rx="20" ry="20" fill="rgba(148, 163, 184, 0.1)" style="pointer-events: all;"/>
+                
+                <!-- Líneas divisorias internas -->
+                <line [attr.x1]="0" [attr.y1]="60" [attr.x2]="node.width" [attr.y2]="60"
+                      stroke="#94a3b8" stroke-width="1.5" stroke-dasharray="3,3"/>
+                <line [attr.x1]="0" [attr.y1]="node.height * 0.4" [attr.x2]="node.width" [attr.y2]="node.height * 0.4"
+                      stroke="#94a3b8" stroke-width="1.5" stroke-dasharray="3,3"/>
+                <line [attr.x1]="0" [attr.y1]="node.height * 0.7" [attr.x2]="node.width" [attr.y2]="node.height * 0.7"
+                      stroke="#94a3b8" stroke-width="1.5" stroke-dasharray="3,3"/>
+
+                <!-- Etiquetas Fijas -->
+                <text [attr.x]="node.width / 2" [attr.y]="25" text-anchor="middle"
+                      fill="#475569" font-size="12" font-style="italic" font-family="Inter, sans-serif">{{node.loopText || '«loop»'}}</text>
+                <text [attr.x]="node.width / 2" [attr.y]="48" text-anchor="middle"
+                      fill="#1e293b" font-size="15" font-weight="700" font-family="Inter, sans-serif">{{node.nombre}}</text>
+
+                <text [attr.x]="15" [attr.y]="82" fill="#64748b" font-size="13" font-weight="600"
+                      font-family="Inter, sans-serif">{{node.setupText || '[Setup]'}}</text>
+                <text [attr.x]="15" [attr.y]="node.height * 0.4 + 22" fill="#64748b" font-size="13" font-weight="600"
+                      font-family="Inter, sans-serif">{{node.testText || '[Test]'}}</text>
+                <text [attr.x]="15" [attr.y]="node.height * 0.7 + 22" fill="#64748b" font-size="13" font-weight="600"
+                      font-family="Inter, sans-serif">{{node.bodyText || '[Body]'}}</text>
+
+                <!-- Resizer Handle -->
+                <g [attr.transform]="'translate(' + (node.width - 30) + ',' + (node.height - 30) + ')'"
+                   style="pointer-events: all;"
+                   cursor="nwse-resize"
+                   (mousedown)="onResizeMouseDown($event, node)">
+                  <rect x="0" y="0" width="40" height="40" fill="transparent" />
+                  <path d="M 15 25 L 25 15 M 20 25 L 25 20" stroke="#94a3b8" stroke-width="3" stroke-linecap="round"/>
+                  <rect x="22" y="22" width="5" height="5" fill="#94a3b8" rx="1"/>
+                </g>
+              }
+
+              @case ('excepcion') {
+                <!-- Cuerpo principal -->
+                <rect [attr.width]="node.width" [attr.height]="node.height" rx="12" ry="12"
+                      fill="#ffffff" stroke="#1e293b" stroke-width="3"
+                      filter="url(#node-shadow)"
+                      class="node-shape"/>
+                <!-- Cuadrado distintivo superior izquierdo -->
+                <rect x="-8" y="-8" width="24" height="24" rx="2"
+                      fill="#ffffff" stroke="#1e293b" stroke-width="3"/>
+                <!-- Texto -->
+                <text [attr.x]="node.width / 2" [attr.y]="node.height / 2 + 6" text-anchor="middle"
+                      fill="#1e293b" font-size="13" font-weight="700"
+                      font-family="Inter, sans-serif">{{ node.nombre }}</text>
+              }
+
+              @case ('object') {
+                <rect [attr.width]="node.width" [attr.height]="node.height"
+                      rx="0" ry="0"
+                      fill="#fff7ed" stroke="#94a3b8" stroke-width="2"
+                      filter="url(#node-shadow)" class="node-shape"/>
+                <text [attr.x]="node.width / 2" [attr.y]="node.height / 2 + 5" text-anchor="middle"
+                      fill="#1e293b" font-size="13" font-weight="600"
+                      font-family="Inter, sans-serif">{{ node.nombre }}</text>
+              }
+
+              @case ('datastore') {
+                <rect [attr.width]="node.width" [attr.height]="node.height"
+                      rx="0" ry="0"
+                      fill="#fff7ed" stroke="#94a3b8" stroke-width="2"
+                      filter="url(#node-shadow)" class="node-shape"/>
+                <text [attr.x]="node.width / 2" [attr.y]="node.height * 0.4" text-anchor="middle"
+                      fill="#475569" font-size="11" font-style="italic"
+                      font-family="Inter, sans-serif">{{ node.subNombre }}</text>
+                <text [attr.x]="node.width / 2" [attr.y]="node.height * 0.7" text-anchor="middle"
+                      fill="#1e293b" font-size="13" font-weight="700"
+                      font-family="Inter, sans-serif">{{ node.nombre }}</text>
+              }
+
+              @case ('fork_horizontal') {
+                <rect [attr.width]="node.width" [attr.height]="node.height"
+                      fill="#1e293b" rx="2" ry="2"
+                      filter="url(#node-shadow)" class="node-shape"/>
+              }
+
+              @case ('fork_vertical') {
+                <rect [attr.width]="node.width" [attr.height]="node.height"
+                      fill="#1e293b" rx="2" ry="2"
+                      filter="url(#node-shadow)" class="node-shape"/>
+              }
+
+              @case ('comment') {
+                <!-- Forma de Nota con esquina doblada -->
+                <path [attr.d]="'M 0 0 L ' + (node.width - 15) + ' 0 L ' + node.width + ' 15 L ' + node.width + ' ' + node.height + ' L 0 ' + node.height + ' Z'"
+                      fill="#fefce8" stroke="#eab308" stroke-width="1.5"
+                      filter="url(#node-shadow)" class="node-shape"/>
+                <!-- Pestaña doblada -->
+                <path [attr.d]="'M ' + (node.width - 15) + ' 0 L ' + (node.width - 15) + ' 15 L ' + node.width + ' 15'"
+                      fill="#fef9c3" stroke="#eab308" stroke-width="1.5"/>
+                <foreignObject x="8" y="10" [attr.width]="node.width - 16" [attr.height]="node.height - 20">
+                  <div xmlns="http://www.w3.org/1999/xhtml" 
+                       style="font-family: 'Inter', sans-serif; font-size: 12px; color: #854d0e; line-height: 1.2; word-break: break-word;">
+                    {{ node.nombre }}
+                  </div>
+                </foreignObject>
+              }
+
+              @case ('time_event') {
+                <!-- Reloj de Arena UML -->
+                <path [attr.d]="'M ' + (node.width * 0.25) + ' ' + (node.height * 0.25) + 
+                                ' L ' + (node.width * 0.75) + ' ' + (node.height * 0.25) + 
+                                ' L ' + (node.width * 0.5) + ' ' + (node.height * 0.5) + 
+                                ' L ' + (node.width * 0.75) + ' ' + (node.height * 0.75) + 
+                                ' L ' + (node.width * 0.25) + ' ' + (node.height * 0.75) + 
+                                ' L ' + (node.width * 0.5) + ' ' + (node.height * 0.5) + ' Z'"
+                      fill="#f8fafc" stroke="#1e293b" stroke-width="2"
+                      filter="url(#node-shadow)" class="node-shape"/>
+                <text [attr.x]="node.width / 2" [attr.y]="node.height + 20" text-anchor="middle"
+                      fill="#94a3b8" font-size="11" font-weight="500"
+                      font-family="Inter, sans-serif">{{ node.nombre }}</text>
+              }
+
+              @case ('inicio') {
+                <circle [attr.cx]="node.width / 2" [attr.cy]="node.height / 2" [attr.r]="node.width / 2 - 2"
+                        fill="#1e293b" stroke="#1e293b" stroke-width="1"
                         filter="url(#node-shadow)" class="node-shape"/>
-                <text [attr.x]="node.width / 2" [attr.y]="node.height / 2 + 5"
-                      text-anchor="middle" fill="white" font-size="14" font-weight="700"
-                      font-family="Inter, sans-serif">▶</text>
+                <text [attr.x]="node.width / 2" [attr.y]="node.height + 20" text-anchor="middle"
+                      fill="#e2e8f0" font-size="12" font-weight="600"
+                      font-family="Inter, sans-serif">Inicio</text>
               }
 
               @case ('fin') {
-                <circle [attr.cx]="node.width / 2" [attr.cy]="node.height / 2" [attr.r]="node.width / 2"
-                        [attr.fill]="getNodeColor(node.tipo)"
-                        stroke="#f87171" stroke-width="3"
+                <!-- Círculo exterior -->
+                <circle [attr.cx]="node.width / 2" [attr.cy]="node.height / 2" [attr.r]="node.width / 2 - 2"
+                        fill="#ffffff" stroke="#1e293b" stroke-width="2"
                         filter="url(#node-shadow)" class="node-shape"/>
-                <circle [attr.cx]="node.width / 2" [attr.cy]="node.height / 2" [attr.r]="node.width / 2 - 6"
-                        fill="none" stroke="white" stroke-width="2"/>
-                <text [attr.x]="node.width / 2" [attr.y]="node.height / 2 + 5"
-                      text-anchor="middle" fill="white" font-size="12" font-weight="700"
-                      font-family="Inter, sans-serif">FIN</text>
+                <!-- Punto central grueso -->
+                <circle [attr.cx]="node.width / 2" [attr.cy]="node.height / 2" [attr.r]="node.width / 4"
+                        fill="#1e293b"/>
+                <text [attr.x]="node.width / 2" [attr.y]="node.height + 20" text-anchor="middle"
+                      fill="#e2e8f0" font-size="12" font-weight="600"
+                      font-family="Inter, sans-serif">Fin</text>
               }
             }
 
@@ -278,6 +566,39 @@
                   <option [value]="func.userId">{{ func.userId }}</option>
                 }
               </select>
+            </div>
+          }
+
+          @if (node.tipo === 'structured_activity') {
+            <div class="structured-header" style="margin-top: 1rem; padding: 0.5rem; background: #334155; color: #fbbf24; font-weight: bold; border-radius: 4px; font-size: 11px; text-transform: uppercase; letter-spacing: 0.05em;">
+              Configuración Estructurada
+            </div>
+            <div class="prop-group" style="margin-top: 0.5rem;">
+              <label style="color: #94a3b8; font-size: 11px;">Texto de Bucle (Loop)</label>
+              <input type="text" [(ngModel)]="editLoopText" (ngModelChange)="updateNodeProperties(false)" (blur)="updateNodeProperties(true)" 
+                     style="width: 100%; padding: 0.5rem; background: #0f172a; color: #fbbf24; border: 1px solid #475569; border-radius: 4px; font-weight: bold;"/>
+            </div>
+            <div class="prop-group">
+              <label style="color: #94a3b8; font-size: 11px;">Etiqueta Setup</label>
+              <input type="text" [(ngModel)]="editSetupText" (ngModelChange)="updateNodeProperties(false)" (blur)="updateNodeProperties(true)"
+                     style="width: 100%; padding: 0.5rem; background: #0f172a; color: white; border: 1px solid #475569; border-radius: 4px;"/>
+            </div>
+            <div class="prop-group">
+              <label style="color: #94a3b8; font-size: 11px;">Etiqueta Test</label>
+              <input type="text" [(ngModel)]="editTestText" (ngModelChange)="updateNodeProperties(false)" (blur)="updateNodeProperties(true)"
+                     style="width: 100%; padding: 0.5rem; background: #0f172a; color: white; border: 1px solid #475569; border-radius: 4px;"/>
+            </div>
+            <div class="prop-group">
+              <label style="color: #94a3b8; font-size: 11px;">Etiqueta Body</label>
+              <input type="text" [(ngModel)]="editBodyText" (ngModelChange)="updateNodeProperties(false)" (blur)="updateNodeProperties(true)"
+                     style="width: 100%; padding: 0.5rem; background: #0f172a; color: white; border: 1px solid #475569; border-radius: 4px;"/>
+            </div>
+          }
+
+          @if (node.tipo === 'datastore') {
+            <div class="prop-group">
+              <label>Estereotipo (Superior)</label>
+              <input type="text" [(ngModel)]="editSubNombre" (ngModelChange)="updateNodeProperties(false)" (blur)="updateNodeProperties(true)"/>
             </div>
           }
 

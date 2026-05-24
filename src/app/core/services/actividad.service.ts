@@ -11,6 +11,8 @@ export interface Actividad {
   estado?: string;
   ejeX: string;
   ejeY: string;
+  width?: string;
+  height?: string;
   tipoNodo: string;
   createdAt?: string;
 }

@@ -1,7 +1,12 @@
 import { Injectable, computed, inject, signal } from '@angular/core';
-import { HttpClient } from '@angular/common/http';
+import { HttpClient, HttpErrorResponse } from '@angular/common/http';
 import { Router } from '@angular/router';
-import { tap } from 'rxjs';
+import { catchError, map, of, switchMap, tap, throwError } from 'rxjs';
+
+export interface ApiErrorBody {
+  message?: string;
+  code?: string;
+}
 
 export interface User {
   id: string;
@@ -16,6 +21,10 @@ export interface AuthResponse {
   nombre: string;
   correo: string;
   rol: string;
+}
+
+interface ExistsResponse {
+  exists: boolean;
 }
 
 @Injectable({
@@ -48,8 +57,76 @@ export class AuthService {
     return this.http.post<AuthResponse>(`${this.apiUrl}/login`, credentials).pipe(
       tap(res => {
         this.setSession(res);
+      }),
+      catchError((error: unknown) => {
+        // Si backend devuelve errores detallados, propagamos tal cual.
+        const directMessage = this.tryExtractBackendMessage(error);
+        if (directMessage) {
+          return throwError(() => new Error(directMessage));
+        }
+
+        // Fallback para casos donde backend responde 403 vacío.
+        if (error instanceof HttpErrorResponse && error.status === 403) {
+          return this.checkCorreoExists(credentials.correo).pipe(
+            map(exists => {
+              throw new Error(
+                exists
+                  ? 'La contraseña es incorrecta.'
+                  : 'No existe una cuenta registrada con ese correo electrónico.'
+              );
+            }),
+            catchError(() =>
+              throwError(() => new Error('Error al iniciar sesión. Intenta de nuevo.'))
+            )
+          );
+        }
+
+        return throwError(() => new Error('Error al iniciar sesión. Intenta de nuevo.'));
       })
     );
+  }
+
+  /** Mensaje legible desde la respuesta JSON del backend (login). */
+  getLoginErrorMessage(error: unknown): string {
+    if (error instanceof Error && error.message) {
+      return error.message;
+    }
+
+    if (!(error instanceof HttpErrorResponse)) {
+      return 'Error al iniciar sesión. Intenta de nuevo.';
+    }
+
+    const body = error.error as ApiErrorBody | string | null;
+
+    if (body && typeof body === 'object' && body.message) {
+      return body.message;
+    }
+
+    if (error.status === 404) {
+      return 'No existe una cuenta registrada con ese correo electrónico.';
+    }
+    if (error.status === 401) {
+      return 'La contraseña es incorrecta.';
+    }
+
+    return 'Error al iniciar sesión. Intenta de nuevo.';
+  }
+
+  private checkCorreoExists(correo: string) {
+    return this.http
+      .get<ExistsResponse>(`${this.apiUrl}/exists`, { params: { correo } })
+      .pipe(map(res => !!res.exists));
+  }
+
+  private tryExtractBackendMessage(error: unknown): string | null {
+    if (!(error instanceof HttpErrorResponse)) {
+      return null;
+    }
+    const body = error.error as ApiErrorBody | string | null;
+    if (body && typeof body === 'object' && body.message) {
+      return body.message;
+    }
+    return null;
   }
 
   register(data: { nombre: string; correo: string; password: string }) {

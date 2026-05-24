@@ -113,7 +113,7 @@ export class LoginComponent {
         this.router.navigate(['/dashboard']);
       },
       error: (err) => {
-        this.errorMsg.set(err.message || 'Error al iniciar sesión');
+        this.errorMsg.set(this.authService.getLoginErrorMessage(err));
         this.loading.set(false);
       }
     });
