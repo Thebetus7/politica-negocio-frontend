@@ -550,12 +550,21 @@
           @if (node.tipo === 'actividad') {
             <div class="prop-group">
               <label>📄 Formulario</label>
-              <select [(ngModel)]="editNodeFormId" (change)="updateNodeProperties(true)">
+              <select
+                [ngModel]="editNodeFormId"
+                (ngModelChange)="onFormularioSelectChange($event)">
                 <option value="">Sin formulario</option>
+                <option [value]="FORM_CREATE_OPTION">➕ Crear nuevo formulario...</option>
                 @for (f of formularios(); track f.id) {
                   <option [value]="f.id">{{ f.nombre }}</option>
                 }
               </select>
+              <button
+                type="button"
+                class="btn-form-create"
+                (click)="abrirCrearFormularioEnActividad()">
+                Diseñar formulario aquí
+              </button>
             </div>
 
             <div class="prop-group">
@@ -636,4 +645,28 @@
       </div>
     }
   </div>
+
+  @if (showFormularioBuilder()) {
+    <div class="wf-form-overlay" role="dialog" aria-modal="true" aria-labelledby="wf-form-builder-title">
+      <div class="wf-form-backdrop" (click)="cerrarFormularioBuilder()"></div>
+      <div
+        class="wf-form-panel"
+        (click)="$event.stopPropagation()">
+        <div class="wf-form-panel-header">
+          <h3 id="wf-form-builder-title">Crear formulario para la actividad</h3>
+          <p class="wf-form-panel-sub">
+            Mismo diseñador que en Formularios. Al guardar se asigna a «{{ editNodeName || 'esta actividad' }}».
+          </p>
+        </div>
+        <div class="wf-form-panel-body">
+          <app-formulario-builder
+            [formularioInicial]="formularioBuilderInicial()"
+            guardarLabel="Guardar y asignar"
+            (saved)="onFormularioCreadoDesdeActividad($event)"
+            (cancelled)="cerrarFormularioBuilder()"
+          />
+        </div>
+      </div>
+    </div>
+  }
 </div>

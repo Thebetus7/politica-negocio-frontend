@@ -3,7 +3,7 @@ import { HttpClient } from '@angular/common/http';
 import { tap } from 'rxjs';
 export interface CampoFormulario {
   id: string;            // UUID generado en frontend para trackear
-  tipo: 'texto' | 'texto_largo' | 'numero' | 'fecha' | 'lista' | 'checkbox' | 'radio';
+  tipo: 'texto' | 'texto_largo' | 'numero' | 'fecha' | 'lista' | 'checkbox' | 'radio' | 'boton' | 'email';
   etiqueta: string;
   placeholder?: string;
   requerido: boolean;

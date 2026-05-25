@@ -1,7 +1,6 @@
 import { Component, Input, Output, EventEmitter, OnChanges, SimpleChanges, signal } from '@angular/core';
-import { CommonModule } from '@angular/common';
+import { CommonModule, DatePipe } from '@angular/common';
 import { FormsModule } from '@angular/forms';
-import { RouterLink } from '@angular/router';
 
 export interface Politica {
   id: string;
@@ -15,7 +14,7 @@ export interface Politica {
 @Component({
   selector: 'app-politica-table',
   standalone: true,
-  imports: [CommonModule, FormsModule, RouterLink],
+  imports: [CommonModule, FormsModule, DatePipe],
   templateUrl: './politica-table.component.html',
 })
 export class PoliticaTableComponent implements OnChanges {

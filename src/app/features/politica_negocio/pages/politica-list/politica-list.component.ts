@@ -1,5 +1,4 @@
 import { Component, OnDestroy, OnInit, inject, signal } from '@angular/core';
-import { CommonModule } from '@angular/common';
 import { PoliticaTableComponent, Politica } from '../../components/politica-table/politica-table.component';
 import { PoliticaFormComponent } from '../../components/politica-form/politica-form.component';
 import { Router } from '@angular/router';
@@ -8,7 +7,7 @@ import { PoliticaService, PoliticaNegocio } from '../../../../core/services/poli
 @Component({
   selector: 'app-politica-list',
   standalone: true,
-  imports: [CommonModule, PoliticaTableComponent, PoliticaFormComponent],
+  imports: [PoliticaTableComponent, PoliticaFormComponent],
   templateUrl: './politica-list.component.html',
 })
 export class PoliticaListComponent implements OnInit, OnDestroy {

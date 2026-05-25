@@ -1,39 +1,25 @@
-<div class="min-h-screen bg-gray-50/50">
-    <!-- Header de la página -->
-    <header class="bg-white border-b border-gray-200">
-        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
-            <div class="flex items-center justify-between">
-                <div>
-                    <h1 class="text-2xl font-bold text-gray-900 tracking-tight">Políticas de Negocio</h1>
-                    <p class="mt-1 text-sm text-gray-500">Gestiona y diseña los diagramas de flujo de tu negocio.</p>
-                </div>
-                <button
-                    (click)="openCreateModal()"
-                    class="inline-flex items-center px-6 py-3 border border-transparent text-sm font-bold rounded-xl shadow-lg shadow-indigo-100 text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 transition-all active:scale-95"
-                >
-                    <svg class="w-5 h-5 mr-2 -ml-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
-                    </svg>
-                    Crear Política
-                </button>
-            </div>
-        </div>
-    </header>
+<div class="space-y-6">
+  <div class="flex justify-between items-center">
+    <div>
+      <h2 class="text-2xl font-bold text-gray-900 dark:text-white">Políticas de Negocio</h2>
+      <p class="mt-1 text-sm text-gray-500 dark:text-gray-400">Gestiona y diseña los diagramas de flujo de tu negocio.</p>
+    </div>
+    <button
+      (click)="openCreateModal()"
+      class="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 transition-colors">
+      Crear Política
+    </button>
+  </div>
 
-    <!-- Contenido principal -->
-    <main class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-10">
-        <!-- Renderizar el componente de tabla -->
-        <app-politica-table
-            [politicas]="politicas()"
-            (onEliminar)="handleEliminar($event)"
-            (onVer)="handleVer($event)"
-        ></app-politica-table>
-    </main>
+  <app-politica-table
+    [politicas]="politicas()"
+    (onEliminar)="handleEliminar($event)"
+    (onVer)="handleVer($event)"
+  />
 
-    <!-- Componente de Formulario (Modal) -->
-    <app-politica-form
-        [show]="showCreateModal()"
-        (onClose)="showCreateModal.set(false)"
-        (onSubmit)="handleCreate($event)"
-    ></app-politica-form>
+  <app-politica-form
+    [show]="showCreateModal()"
+    (onClose)="showCreateModal.set(false)"
+    (onSubmit)="handleCreate($event)"
+  />
 </div>

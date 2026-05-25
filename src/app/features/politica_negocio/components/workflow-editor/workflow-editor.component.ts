@@ -8,6 +8,7 @@ import { ActividadService, Actividad } from '../../../../core/services/actividad
 import { FlujoService, Flujo } from '../../../../core/services/flujo.service';
 import { DepartamentoService } from '../../../../core/services/departamento.service';
 import { FormularioService, Formulario } from '../../../../core/services/formulario.service';
+import { FormularioBuilderComponent } from '../../../formularios/components/formulario-builder/formulario-builder.component';
 import { FuncionarioDepaService } from '../../../../core/services/funcionario-depa.service';
 import { PoliticaService } from '../../../../core/services/politica.service';
 import { AuthService } from '../../../../core/services/auth.service';
@@ -65,7 +66,7 @@ interface RemoteCursor {
 @Component({
   selector: 'app-workflow-editor',
   standalone: true,
-  imports: [CommonModule, FormsModule],
+  imports: [CommonModule, FormsModule, FormularioBuilderComponent],
   templateUrl: './workflow-editor.component.html',
   styleUrls: ['./workflow-editor.component.css']
 })
@@ -134,6 +135,10 @@ export class WorkflowEditorComponent implements OnInit, AfterViewInit, OnDestroy
   // Campos editables para datastore
   editSubNombre = '';
 
+  /** Valor especial en el select de formulario */
+  readonly FORM_CREATE_OPTION = '__create__';
+  showFormularioBuilder = signal(false);
+  formularioBuilderInicial = signal<Formulario | null>(null);
 
   // Color del cursor local
   cursorColor = this.getRandomColor();
@@ -733,6 +738,41 @@ export class WorkflowEditorComponent implements OnInit, AfterViewInit, OnDestroy
   onNodeContextMenu(event: MouseEvent, node: WorkflowNode): void {
     event.preventDefault();
     this.selectNode(node);
+  }
+
+  onFormularioSelectChange(value: string): void {
+    if (value === this.FORM_CREATE_OPTION) {
+      this.abrirCrearFormularioEnActividad();
+      return;
+    }
+    this.editNodeFormId = value;
+    this.updateNodeProperties(true);
+  }
+
+  abrirCrearFormularioEnActividad(): void {
+    const node = this.selectedNode();
+    const nombreSugerido = node?.nombre?.trim()
+      ? `Formulario — ${node.nombre.trim()}`
+      : '';
+    this.formularioBuilderInicial.set(
+      nombreSugerido
+        ? { nombre: nombreSugerido, descripcion: '', campos: [] }
+        : null
+    );
+    this.showFormularioBuilder.set(true);
+  }
+
+  cerrarFormularioBuilder(): void {
+    this.showFormularioBuilder.set(false);
+    this.editNodeFormId = this.selectedNode()?.formularioId || '';
+  }
+
+  onFormularioCreadoDesdeActividad(form: Formulario): void {
+    this.showFormularioBuilder.set(false);
+    if (form.id) {
+      this.editNodeFormId = form.id;
+      this.updateNodeProperties(true);
+    }
   }
 
   // ──────── Propiedades del nodo ────────
