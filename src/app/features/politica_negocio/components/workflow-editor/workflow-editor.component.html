@@ -6,6 +6,15 @@
       <h2>{{ politicaNombre || 'Diagrama de Actividades' }}</h2>
     </div>
     <div class="wf-header-right">
+      @if (flujoValido() === true) {
+        <span class="wf-flujo-badge wf-flujo-badge--ok">
+          Flujo válido@if (flujoVersion(); as v) { v{{ v }}}
+        </span>
+      } @else if (flujoValido() === false) {
+        <span class="wf-flujo-badge wf-flujo-badge--warn" [title]="flujoMensaje()">
+          Flujo incompleto
+        </span>
+      }
       <button class="btn-save" (click)="saveDiagram()">💾 Guardar</button>
     </div>
   </div>
@@ -546,6 +555,39 @@
             <label>Nombre</label>
             <input type="text" [(ngModel)]="editNodeName" (ngModelChange)="updateNodeProperties(false)" (blur)="updateNodeProperties(true)"/>
           </div>
+
+          @if (node.tipo === 'pregunta') {
+            <div class="prop-group">
+              <label>Tipo iterativo</label>
+              <select
+                [(ngModel)]="editIterativoTipo"
+                (ngModelChange)="updateNodeProperties(false)"
+                (change)="updateNodeProperties(true)"
+                style="width: 100%; padding: 0.5rem; background: #1e293b; color: white; border: 1px solid #334155; border-radius: 4px;">
+                <option value="while_do">While Do</option>
+                <option value="do_while">Do While</option>
+              </select>
+            </div>
+            <div class="prop-group">
+              <label>Condición / nombre</label>
+              <input
+                type="text"
+                [(ngModel)]="editCondicion"
+                (ngModelChange)="updateNodeProperties(false)"
+                (blur)="updateNodeProperties(true)"/>
+            </div>
+          }
+
+          @if (node.tipo === 'decision') {
+            <div class="prop-group">
+              <label>Condición / nombre</label>
+              <input
+                type="text"
+                [(ngModel)]="editCondicion"
+                (ngModelChange)="updateNodeProperties(false)"
+                (blur)="updateNodeProperties(true)"/>
+            </div>
+          }
 
           @if (node.tipo === 'actividad') {
             <div class="prop-group">

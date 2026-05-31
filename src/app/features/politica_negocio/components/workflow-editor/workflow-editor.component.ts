@@ -14,6 +14,7 @@ import { PoliticaService } from '../../../../core/services/politica.service';
 import { AuthService } from '../../../../core/services/auth.service';
 import { FormUpdateService } from '../../../../core/services/form-update.service';
 import { DiagramService } from '../../services/diagram.service';
+import { LogPoliticaService } from '../../../../core/services/log-politica.service';
 
 // ──────── Interfaces internas ────────
 interface WorkflowNode {
@@ -43,6 +44,10 @@ interface WorkflowNode {
   bodyText?: string;
   // Campos para Object y DataStore
   subNombre?: string;
+  /** while_do | do_while — nodo pregunta */
+  iterativoTipo?: 'while_do' | 'do_while';
+  /** Condición mostrada en decision / pregunta */
+  condicion?: string;
 }
 
 interface WorkflowLink {
@@ -83,6 +88,7 @@ export class WorkflowEditorComponent implements OnInit, AfterViewInit, OnDestroy
   private authService = inject(AuthService);
   private formUpdateService = inject(FormUpdateService);
   private diagramService = inject(DiagramService);
+  private logPoliticaService = inject(LogPoliticaService);
 
   @ViewChild('svgCanvas', { static: true }) svgCanvas!: ElementRef<SVGSVGElement>;
   @ViewChild('canvasWrapper') canvasWrapper!: ElementRef<HTMLDivElement>;
@@ -134,6 +140,13 @@ export class WorkflowEditorComponent implements OnInit, AfterViewInit, OnDestroy
   editBodyText = '';
   // Campos editables para datastore
   editSubNombre = '';
+  editIterativoTipo: 'while_do' | 'do_while' = 'while_do';
+  editCondicion = '';
+
+  /** Estado del último compile de LogPolitica */
+  flujoValido = signal<boolean | null>(null);
+  flujoVersion = signal<number | null>(null);
+  flujoMensaje = signal<string>('');
 
   /** Valor especial en el select de formulario */
   readonly FORM_CREATE_OPTION = '__create__';
@@ -204,6 +217,7 @@ export class WorkflowEditorComponent implements OnInit, AfterViewInit, OnDestroy
     this.loadFormularios();
     this.loadActividades();
     this.loadFlujos();
+    this.loadFlujoEstado();
 
     // WebSocket
     this.diagramService.connectToDiagram(this.politicaId);
@@ -291,6 +305,13 @@ export class WorkflowEditorComponent implements OnInit, AfterViewInit, OnDestroy
             data = a.estado;
           }
           newNode.subNombre = data.subNombre || '«datastore»';
+        } else if (tipo === 'pregunta') {
+          const data = this.parseNodeEstadoMeta(a.estado);
+          newNode.iterativoTipo = data.iterativoTipo === 'do_while' ? 'do_while' : 'while_do';
+          newNode.condicion = data.condicion || newNode.nombre;
+        } else if (tipo === 'decision') {
+          const data = this.parseNodeEstadoMeta(a.estado);
+          newNode.condicion = data.condicion || newNode.nombre;
         }
         return newNode;
       });
@@ -345,6 +366,15 @@ export class WorkflowEditorComponent implements OnInit, AfterViewInit, OnDestroy
       newNode.bodyText = '[Body]';
     }
 
+    if (tipo === 'pregunta') {
+      newNode.iterativoTipo = 'while_do';
+      newNode.condicion = '¿Pregunta?';
+    }
+
+    if (tipo === 'decision') {
+      newNode.condicion = '¿Condición?';
+    }
+
     if (tipo === 'datastore') {
       newNode.subNombre = '«datastore»';
     }
@@ -364,6 +394,15 @@ export class WorkflowEditorComponent implements OnInit, AfterViewInit, OnDestroy
     } else if (tipo === 'datastore') {
       initialEstado = JSON.stringify({
         subNombre: newNode.subNombre
+      });
+    } else if (tipo === 'pregunta') {
+      initialEstado = JSON.stringify({
+        iterativoTipo: newNode.iterativoTipo || 'while_do',
+        condicion: newNode.condicion || newNode.nombre
+      });
+    } else if (tipo === 'decision') {
+      initialEstado = JSON.stringify({
+        condicion: newNode.condicion || newNode.nombre
       });
     }
 
@@ -709,6 +748,18 @@ export class WorkflowEditorComponent implements OnInit, AfterViewInit, OnDestroy
     } else {
       this.editSubNombre = '';
     }
+
+    if (node.tipo === 'pregunta') {
+      this.editIterativoTipo = node.iterativoTipo ?? 'while_do';
+      this.editCondicion = node.condicion ?? node.nombre ?? '¿Pregunta?';
+    } else {
+      this.editIterativoTipo = 'while_do';
+      this.editCondicion = '';
+    }
+
+    if (node.tipo === 'decision') {
+      this.editCondicion = node.condicion ?? node.nombre ?? '¿Condición?';
+    }
     
     this.showPropertiesPanel.set(true);
 
@@ -795,6 +846,15 @@ export class WorkflowEditorComponent implements OnInit, AfterViewInit, OnDestroy
       node.subNombre = this.editSubNombre;
     }
 
+    if (node.tipo === 'pregunta') {
+      node.iterativoTipo = this.editIterativoTipo;
+      node.condicion = this.editCondicion;
+    }
+
+    if (node.tipo === 'decision') {
+      node.condicion = this.editCondicion;
+    }
+
     // Buscar nombre del formulario
     if (this.editNodeFormId) {
       const form = this.formularios().find(f => f.id === this.editNodeFormId);
@@ -822,14 +882,7 @@ export class WorkflowEditorComponent implements OnInit, AfterViewInit, OnDestroy
         tipoNodo: this.persistTipoNodo(node.tipo),
         width: node.width ? String(node.width) : undefined,
         height: node.height ? String(node.height) : undefined,
-        estado: node.tipo === 'structured_activity' ? JSON.stringify({
-          loop: node.loopText || '«loop»',
-          setup: node.setupText || '[Setup]',
-          test: node.testText || '[Test]',
-          body: node.bodyText || '[Body]'
-        }) : (node.tipo === 'datastore' ? JSON.stringify({
-          subNombre: node.subNombre || '«datastore»'
-        }) : (node.estado || 'pendiente')),
+        estado: this.buildEstadoForPersist(node),
         formUpdateId
       };
       this.actividadService.update(this.politicaId, node.id, actividad).subscribe(() => {
@@ -1158,6 +1211,7 @@ export class WorkflowEditorComponent implements OnInit, AfterViewInit, OnDestroy
       // Recargar del servidor para evitar conflictos
       this.loadActividades();
       this.loadFlujos();
+      this.loadFlujoEstado();
     }
   }
 
@@ -1200,10 +1254,82 @@ export class WorkflowEditorComponent implements OnInit, AfterViewInit, OnDestroy
 
   // ──────── Guardar diagrama completo ────────
   saveDiagram(): void {
-    // Todas las actividades y flujos ya se persisten individualmente.
-    // Este botón fuerza un broadcast a todos los usuarios conectados.
     this.broadcastUpdate();
-    alert('Diagrama guardado correctamente');
+    this.logPoliticaService.compile(this.politicaId).subscribe({
+      next: (result) => {
+        this.flujoValido.set(result.valido);
+        this.flujoVersion.set(result.version ?? null);
+        this.flujoMensaje.set(result.mensaje ?? '');
+        if (result.valido) {
+          alert(`Flujo válido guardado (versión ${result.version})`);
+        } else {
+          alert(`Flujo incompleto: ${result.mensaje ?? 'Revise conexiones hasta Fin'}`);
+        }
+      },
+      error: () => {
+        this.flujoValido.set(false);
+        this.flujoMensaje.set('Error al compilar el flujo');
+        alert('Error al compilar el flujo. Verifique que el backend esté activo.');
+      }
+    });
+  }
+
+  private loadFlujoEstado(): void {
+    this.logPoliticaService.getUltimo(this.politicaId).subscribe({
+      next: (log) => {
+        this.flujoValido.set(log.valido && log.funcional);
+        this.flujoVersion.set(log.version);
+        this.flujoMensaje.set(log.mensajeValidacion ?? 'Flujo activo');
+      },
+      error: () => {
+        this.flujoValido.set(null);
+        this.flujoVersion.set(null);
+        this.flujoMensaje.set('Sin flujo compilado');
+      }
+    });
+  }
+
+  private parseNodeEstadoMeta(estado: unknown): { iterativoTipo?: string; condicion?: string } {
+    if (!estado) return {};
+    if (typeof estado === 'object' && estado !== null) {
+      const o = estado as Record<string, unknown>;
+      return {
+        iterativoTipo: o['iterativoTipo'] as string | undefined,
+        condicion: o['condicion'] as string | undefined
+      };
+    }
+    if (typeof estado === 'string' && estado.trim().startsWith('{')) {
+      try {
+        return this.parseNodeEstadoMeta(JSON.parse(estado));
+      } catch {
+        return {};
+      }
+    }
+    return {};
+  }
+
+  private buildEstadoForPersist(node: WorkflowNode): string {
+    if (node.tipo === 'structured_activity') {
+      return JSON.stringify({
+        loop: node.loopText || '«loop»',
+        setup: node.setupText || '[Setup]',
+        test: node.testText || '[Test]',
+        body: node.bodyText || '[Body]'
+      });
+    }
+    if (node.tipo === 'datastore') {
+      return JSON.stringify({ subNombre: node.subNombre || '«datastore»' });
+    }
+    if (node.tipo === 'pregunta') {
+      return JSON.stringify({
+        iterativoTipo: node.iterativoTipo || 'while_do',
+        condicion: node.condicion || node.nombre
+      });
+    }
+    if (node.tipo === 'decision') {
+      return JSON.stringify({ condicion: node.condicion || node.nombre });
+    }
+    return node.estado || 'pendiente';
   }
 
   // ──────── Volver ────────
