@@ -8,10 +8,12 @@ export interface FormUpdate {
   actividadId: string;
 }
 
+import { API_URL } from './api-config';
+
 @Injectable({ providedIn: 'root' })
 export class FormUpdateService {
   private http = inject(HttpClient);
-  private apiUrl = 'http://localhost:8081/api/form-updates';
+  private apiUrl = `${API_URL}/form-updates`;
 
   getByActividad(actividadId: string) {
     return this.http.get<FormUpdate[]>(`${this.apiUrl}?actividadId=${actividadId}`);

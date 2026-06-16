@@ -51,6 +51,12 @@ export const routes: Routes = [
         loadComponent: () => import('./features/formularios/pages/formulario-list/formulario-list.component').then(m => m.FormularioListComponent),
         canActivate: [roleGuard],
         data: { roles: ['ADMINISTRADOR', 'ROLE_ADMINISTRADOR'] }
+      },
+      {
+        path: 'tareas',
+        loadComponent: () => import('./features/tareas/pages/tarea-list/tarea-list.component').then(m => m.TareaListComponent),
+        canActivate: [roleGuard],
+        data: { roles: ['FUNCIONARIO', 'ROLE_FUNCIONARIO'] }
       }
     ]
   },

@@ -2,6 +2,7 @@ import { Injectable, computed, inject, signal } from '@angular/core';
 import { HttpClient, HttpErrorResponse } from '@angular/common/http';
 import { Router } from '@angular/router';
 import { catchError, map, of, switchMap, tap, throwError } from 'rxjs';
+import { API_URL } from './api-config';
 
 export interface ApiErrorBody {
   message?: string;
@@ -33,7 +34,7 @@ interface ExistsResponse {
 export class AuthService {
   private http = inject(HttpClient);
   private router = inject(Router);
-  private apiUrl = 'http://localhost:8081/api/auth';
+  private apiUrl = `${API_URL}/auth`;
 
   // Signals para manejar el estado
   private tokenSignal = signal<string | null>(localStorage.getItem('token'));

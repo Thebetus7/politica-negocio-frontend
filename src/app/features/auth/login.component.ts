@@ -62,7 +62,11 @@ import { AuthService } from '../../core/services/auth.service';
               </label>
             </div>
 
-            <div class="text-sm">
+            <div class="text-sm flex gap-2">
+              <button type="button" (click)="llenarCredenciales()" class="font-medium text-amber-600 hover:text-amber-500 transition-colors">
+                Llenar Admin
+              </button>
+              <span class="text-gray-300 dark:text-gray-600">|</span>
               <a class="font-medium text-indigo-600 hover:text-indigo-500 transition-colors">
                 ¿Olvidaste tu contraseña?
               </a>
@@ -103,6 +107,11 @@ export class LoginComponent {
 
   private authService = inject(AuthService);
   private router = inject(Router);
+
+  llenarCredenciales() {
+    this.correo = 'admin@example.com';
+    this.password = 'admin123';
+  }
 
   onSubmit() {
     this.loading.set(true);

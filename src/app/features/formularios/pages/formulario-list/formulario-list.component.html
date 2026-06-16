@@ -94,15 +94,17 @@
         </h3>
       </div>
 
-      @if (modalAbierto()) {
-        <div class="flex flex-1 flex-col min-h-0 px-6 py-4">
+      <div class="flex flex-1 flex-col min-h-0 px-6 py-4">
+        @if (cargandoBuilder()) {
+          <p class="py-8 text-center text-sm text-gray-500 dark:text-gray-400">Cargando formulario...</p>
+        } @else {
           <app-formulario-builder
             [formularioInicial]="builderInicial()"
             (saved)="onBuilderSaved()"
             (cancelled)="cerrarModal()"
           />
-        </div>
-      }
+        }
+      </div>
     </div>
   </div>
 }

@@ -1,196 +1,271 @@
 <div class="flex flex-col min-h-0 flex-1">
-  <div class="flex-1 overflow-y-auto space-y-4">
-    <div class="grid grid-cols-1 gap-4 sm:grid-cols-2">
-      <div>
-        <label for="formNombre" class="block text-sm font-medium text-gray-700 dark:text-gray-300">Nombre *</label>
-        <input
-          id="formNombre"
-          [(ngModel)]="formNombre"
-          type="text"
-          placeholder="Ej: Solicitud de Crédito"
-          class="mt-1 block w-full shadow-sm focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm border-gray-300 rounded-md dark:bg-gray-700 dark:border-gray-600 dark:text-white py-2 px-3"
-        />
-      </div>
-      <div>
-        <label for="formDescripcion" class="block text-sm font-medium text-gray-700 dark:text-gray-300">Descripción</label>
-        <input
-          id="formDescripcion"
-          [(ngModel)]="formDescripcion"
-          type="text"
-          placeholder="Descripción breve..."
-          class="mt-1 block w-full shadow-sm focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm border-gray-300 rounded-md dark:bg-gray-700 dark:border-gray-600 dark:text-white py-2 px-3"
-        />
+  <!-- Cabecera de metadatos (Nombre y Descripción) -->
+  <div class="grid grid-cols-1 gap-4 sm:grid-cols-2 mb-6">
+    <div>
+      <label for="formNombre" class="block text-sm font-medium text-gray-700 dark:text-gray-300">Nombre del Formulario *</label>
+      <input
+        id="formNombre"
+        [(ngModel)]="formNombre"
+        type="text"
+        placeholder="Ej: Solicitud de Vacaciones"
+        class="mt-1 block w-full shadow-sm focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm border-gray-300 rounded-md dark:bg-gray-700 dark:border-gray-600 dark:text-white py-2 px-3 transition-colors"
+      />
+    </div>
+    <div>
+      <label for="formDescripcion" class="block text-sm font-medium text-gray-700 dark:text-gray-300">Descripción Breve</label>
+      <input
+        id="formDescripcion"
+        [(ngModel)]="formDescripcion"
+        type="text"
+        placeholder="Ej: Formulario para solicitar días de descanso..."
+        class="mt-1 block w-full shadow-sm focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm border-gray-300 rounded-md dark:bg-gray-700 dark:border-gray-600 dark:text-white py-2 px-3 transition-colors"
+      />
+    </div>
+  </div>
+
+  <!-- Zona de Constructor de dos columnas -->
+  <div class="flex-1 flex flex-col md:flex-row gap-6 min-h-0">
+    <!-- Columna Izquierda: Paleta de Componentes -->
+    <div class="w-full md:w-64 flex-shrink-0 flex flex-col bg-gray-50 dark:bg-gray-800/40 border border-gray-200 dark:border-gray-700 rounded-xl p-4">
+      <h3 class="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider mb-3">Componentes</h3>
+      <div class="grid grid-cols-2 md:grid-cols-1 gap-2 overflow-y-auto">
+        @for (t of tiposDisponibles; track t.tipo) {
+          <button
+            type="button"
+            (click)="agregarCampo(t.tipo)"
+            class="flex items-center gap-3 rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 p-3 text-left hover:border-indigo-500 dark:hover:border-indigo-400 hover:shadow-sm transition-all group active:scale-95">
+            <span class="text-xl p-1 bg-indigo-50 dark:bg-indigo-900/30 rounded-md group-hover:bg-indigo-100 dark:group-hover:bg-indigo-900/50 transition-colors">{{ t.icono }}</span>
+            <span class="text-sm font-medium text-gray-700 dark:text-gray-300 group-hover:text-indigo-600 dark:group-hover:text-indigo-400">{{ t.label }}</span>
+          </button>
+        }
       </div>
     </div>
 
-    <div class="relative">
-      <button
-        type="button"
-        (click)="toggleMenu()"
-        class="w-full inline-flex items-center justify-center gap-2 px-4 py-2 border-2 border-dashed border-gray-300 dark:border-gray-600 rounded-md text-sm font-medium text-indigo-600 dark:text-indigo-400 hover:bg-gray-50 dark:hover:bg-gray-700/50 transition-colors">
-        Añadir componente
-      </button>
-      @if (menuAbierto()) {
-        <div class="absolute left-0 right-0 top-full z-20 mt-1 rounded-md border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 shadow-lg p-2 grid grid-cols-3 sm:grid-cols-5 gap-2">
-          @for (t of tiposDisponibles; track t.tipo) {
-            <button
-              type="button"
-              (click)="agregarCampo(t.tipo)"
-              class="flex flex-col items-center gap-1 rounded-md p-2 text-center hover:bg-gray-50 dark:hover:bg-gray-700/50 transition-colors">
-              <span class="text-lg">{{ t.icono }}</span>
-              <span class="text-[10px] font-medium text-gray-600 dark:text-gray-400">{{ t.label }}</span>
-            </button>
-          }
-        </div>
-      }
-    </div>
+    <!-- Columna Derecha: Lienzo del Formulario -->
+    <div class="flex-1 flex flex-col min-h-0 bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-xl p-4">
+      <div class="flex items-center justify-between border-b border-gray-100 dark:border-gray-800 pb-3 mb-4">
+        <h3 class="text-sm font-semibold text-gray-800 dark:text-gray-200">Lienzo del Formulario</h3>
+        <span class="text-xs text-gray-500 dark:text-gray-400 font-medium bg-gray-100 dark:bg-gray-800 px-2.5 py-1 rounded-full">{{ camposForm().length }} elementos</span>
+      </div>
 
-    @if (camposForm().length === 0) {
-      <p class="py-6 text-center text-sm text-gray-500 dark:text-gray-400">
-        El formulario está vacío. Añade componentes arriba.
-      </p>
-    } @else {
-      <div class="space-y-4">
-        @for (campo of camposForm(); track campo.id; let i = $index) {
-          <div class="rounded-md border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-700/30 p-4 hover:border-indigo-300 dark:hover:border-indigo-600 transition-colors">
-            <div class="mb-3 flex flex-wrap items-center justify-between gap-3 border-b border-gray-200 pb-2 dark:border-gray-600">
-              @if (campoAdmiteRequerido(campo.tipo)) {
-                <label class="flex cursor-pointer items-center gap-2">
-                  <input type="checkbox" [(ngModel)]="campo.requerido" class="h-4 w-4 rounded border-gray-300 text-indigo-600 focus:ring-indigo-500 dark:border-gray-500" />
-                  <span class="text-xs font-medium text-gray-600 dark:text-gray-300">Requerido</span>
-                </label>
-              } @else {
-                <span class="text-xs font-medium text-gray-500 dark:text-gray-400">Acción del formulario</span>
-              }
-              <div class="inline-flex flex-wrap items-center gap-3" [class.ml-auto]="!campoAdmiteRequerido(campo.tipo)">
-                @if (i > 0) {
-                  <button type="button" (click)="moverCampo(i, -1)" title="Subir"
-                    class="text-xs text-gray-500 hover:text-indigo-600 dark:text-gray-400 dark:hover:text-indigo-300">Subir</button>
-                }
-                @if (i < camposForm().length - 1) {
-                  <button type="button" (click)="moverCampo(i, 1)" title="Bajar"
-                    class="text-xs text-gray-500 hover:text-indigo-600 dark:text-gray-400 dark:hover:text-indigo-300">Bajar</button>
-                }
-                <button type="button" (click)="eliminarCampo(i)" title="Eliminar"
-                  class="text-xs text-red-600 hover:text-red-900 dark:text-red-400 dark:hover:text-red-300">Quitar</button>
-              </div>
-            </div>
-
-            <div class="mb-2 flex items-center gap-2">
-              <input
-                [(ngModel)]="campo.etiqueta"
-                type="text"
-                [placeholder]="campo.tipo === 'boton' ? 'Texto del botón' : 'Etiqueta del campo'"
-                class="block min-w-0 flex-1 border-0 bg-transparent p-0 text-sm font-medium text-gray-900 dark:text-white placeholder-gray-400 focus:ring-0"
-              />
-              @if (campo.requerido && campoAdmiteRequerido(campo.tipo)) {
-                <span class="flex-shrink-0 text-sm text-red-500">*</span>
-              }
-            </div>
-
-            @switch (campo.tipo) {
-              @case ('texto') {
-                <input type="text" [placeholder]="campo.placeholder || 'Texto...'"
-                  class="mt-1 block w-full shadow-sm focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm border-gray-300 rounded-md dark:bg-gray-700 dark:border-gray-600 dark:text-white py-2 px-3" />
-              }
-              @case ('texto_largo') {
-                <textarea [placeholder]="campo.placeholder || 'Escribe aquí...'" rows="3"
-                  class="mt-1 block w-full resize-none shadow-sm focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm border-gray-300 rounded-md dark:bg-gray-700 dark:border-gray-600 dark:text-white py-2 px-3"></textarea>
-              }
-              @case ('numero') {
-                <input type="number" [placeholder]="campo.placeholder || '0'"
-                  class="mt-1 block w-full shadow-sm focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm border-gray-300 rounded-md dark:bg-gray-700 dark:border-gray-600 dark:text-white py-2 px-3" />
-              }
-              @case ('fecha') {
-                <input type="date"
-                  class="mt-1 block w-full shadow-sm focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm border-gray-300 rounded-md dark:bg-gray-700 dark:border-gray-600 dark:text-white py-2 px-3" />
-              }
-              @case ('email') {
-                <input type="email" [placeholder]="campo.placeholder || 'correo@ejemplo.com'"
-                  class="mt-1 block w-full shadow-sm focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm border-gray-300 rounded-md dark:bg-gray-700 dark:border-gray-600 dark:text-white py-2 px-3" />
-              }
-              @case ('lista') {
-                <select class="mt-1 block w-full shadow-sm focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm border-gray-300 rounded-md dark:bg-gray-700 dark:border-gray-600 dark:text-white py-2 px-3">
-                  <option value="" disabled selected>Selecciona una opción...</option>
-                  @for (opt of campo.opciones; track opt) {
-                    <option>{{ opt }}</option>
+      <div class="flex-1 overflow-y-auto space-y-4 pr-1">
+        @if (camposForm().length === 0) {
+          <div class="h-full flex flex-col items-center justify-center py-12 text-center">
+            <div class="text-4xl mb-3 text-gray-300 dark:text-gray-600">📥</div>
+            <p class="text-sm font-medium text-gray-500 dark:text-gray-400">El lienzo está vacío.</p>
+            <p class="text-xs text-gray-400 dark:text-gray-500 mt-1">Selecciona un componente de la paleta izquierda para agregarlo.</p>
+          </div>
+        } @else {
+          <div class="space-y-4">
+            @for (campo of camposForm(); track campo.id; let i = $index) {
+              <!-- Tarjeta de Componente -->
+              <div class="flex rounded-xl border border-gray-200 dark:border-gray-700 bg-gray-50/50 dark:bg-gray-800/20 hover:border-indigo-300 dark:hover:border-indigo-800 transition-all shadow-sm">
+                <!-- Barrita de deslizamiento vertical (Reordenamiento) -->
+                <div class="w-10 flex flex-col items-center justify-between py-2 border-r border-gray-100 dark:border-gray-800 bg-gray-100/30 dark:bg-gray-800/10 rounded-l-xl">
+                  @if (i > 0) {
+                    <button type="button" (click)="moverCampo(i, -1)" title="Mover Arriba"
+                      class="p-1 rounded text-gray-400 hover:text-indigo-600 dark:hover:text-indigo-400 hover:bg-gray-100 dark:hover:bg-gray-800 transition-all">
+                      ▲
+                    </button>
+                  } @else {
+                    <span class="h-6"></span>
                   }
-                </select>
-                <input
-                  [ngModel]="campo.opciones?.join(', ')"
-                  (ngModelChange)="parsearOpciones(campo, $event)"
-                  type="text"
-                  placeholder="Opciones separadas por coma"
-                  class="mt-2 block w-full shadow-sm focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm border-gray-300 rounded-md dark:bg-gray-700 dark:border-gray-600 dark:text-white py-2 px-3"
-                />
-              }
-              @case ('checkbox') {
-                <label class="mt-1 flex cursor-pointer items-center gap-3">
-                  <input type="checkbox" class="h-4 w-4 rounded border-gray-300 text-indigo-600" />
-                  <span class="text-sm text-gray-600 dark:text-gray-400">{{ campo.etiqueta }}</span>
-                </label>
-              }
-              @case ('radio') {
-                <div class="mt-1 space-y-2">
-                  @for (opt of campo.opciones; track opt) {
-                    <label class="flex cursor-pointer items-center gap-2">
-                      <input type="radio" [name]="campo.id" class="h-4 w-4 border-gray-300 text-indigo-600" />
-                      <span class="text-sm text-gray-600 dark:text-gray-400">{{ opt }}</span>
+                  <span class="text-gray-400 cursor-ns-resize font-bold select-none text-xs" title="Haga clic en los botones para reordenar">⋮⋮</span>
+                  @if (i < camposForm().length - 1) {
+                    <button type="button" (click)="moverCampo(i, 1)" title="Mover Abajo"
+                      class="p-1 rounded text-gray-400 hover:text-indigo-600 dark:hover:text-indigo-400 hover:bg-gray-100 dark:hover:bg-gray-800 transition-all">
+                      ▼
+                    </button>
+                  } @else {
+                    <span class="h-6"></span>
+                  }
+                </div>
+
+                <!-- Contenido del Componente -->
+                <div class="flex-1 p-4">
+                  <!-- Cabecera de la Tarjeta (Tipo, Requerido y Quitar) -->
+                  <div class="mb-3 flex flex-wrap items-center justify-between gap-3 border-b border-gray-100 dark:border-gray-800 pb-2">
+                    <span class="inline-flex items-center gap-1.5 text-xs font-semibold text-gray-500 dark:text-gray-400">
+                      {{ getTipoLabel(campo.tipo) }}
+                    </span>
+                    <div class="inline-flex items-center gap-3">
+                      @if (campoAdmiteRequerido(campo.tipo)) {
+                        <label class="flex cursor-pointer items-center gap-2">
+                          <input type="checkbox" [(ngModel)]="campo.requerido" class="h-4 w-4 rounded border-gray-300 text-indigo-600 focus:ring-indigo-500 dark:border-gray-500" />
+                          <span class="text-xs font-medium text-gray-600 dark:text-gray-300">Requerido</span>
+                        </label>
+                      }
+                      <button type="button" (click)="eliminarCampo(i)" title="Eliminar componente"
+                        class="text-xs text-red-600 hover:text-red-900 dark:text-red-400 dark:hover:text-red-300 font-semibold transition-colors">
+                        Quitar
+                      </button>
+                    </div>
+                  </div>
+
+                  <!-- Configuración de la Pregunta / Etiqueta -->
+                  <div class="mb-3">
+                    <label [for]="'pregunta-' + campo.id" class="block text-xs font-medium text-gray-500 dark:text-gray-400">
+                      Título / Etiqueta de la Pregunta
+                      @if (campo.requerido && campoAdmiteRequerido(campo.tipo)) {
+                        <span class="text-red-500">*</span>
+                      }
                     </label>
-                  }
+                    <input
+                      [id]="'pregunta-' + campo.id"
+                      [(ngModel)]="campo.etiqueta"
+                      type="text"
+                      [placeholder]="placeholderPregunta(campo.tipo)"
+                      class="mt-1 block w-full shadow-sm focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm border-gray-300 rounded-md dark:bg-gray-700 dark:border-gray-600 dark:text-white py-2 px-3 font-medium transition-colors"
+                    />
+                  </div>
+
+                  <!-- Vista Previa Interactiva según Tipo -->
+                  <div class="mt-4 p-3 rounded-lg border border-gray-100 dark:border-gray-800 bg-white dark:bg-gray-800/40">
+                    <p class="text-[10px] font-semibold text-gray-400 dark:text-gray-500 uppercase tracking-wider mb-2">Vista previa del funcionario</p>
+
+                    @switch (campo.tipo) {
+                      @case ('texto') {
+                        <input type="text" disabled [placeholder]="campo.placeholder || 'Escribe tu respuesta...'"
+                          class="mt-1 block w-full shadow-sm sm:text-sm border-gray-300 rounded-md bg-gray-50 dark:bg-gray-700 dark:border-gray-600 dark:text-white py-2 px-3" />
+                      }
+                      @case ('texto_largo') {
+                        <textarea disabled [placeholder]="campo.placeholder || 'Escribe tu respuesta...'" rows="2"
+                          class="mt-1 block w-full shadow-sm sm:text-sm border-gray-300 rounded-md bg-gray-50 dark:bg-gray-700 dark:border-gray-600 dark:text-white py-2 px-3"></textarea>
+                      }
+                      @case ('numero') {
+                        <input type="number" disabled [placeholder]="campo.placeholder || '0'"
+                          class="mt-1 block w-full shadow-sm sm:text-sm border-gray-300 rounded-md bg-gray-50 dark:bg-gray-700 dark:border-gray-600 dark:text-white py-2 px-3" />
+                      }
+                      @case ('fecha') {
+                        <input type="date" disabled
+                          class="mt-1 block w-full shadow-sm sm:text-sm border-gray-300 rounded-md bg-gray-50 dark:bg-gray-700 dark:border-gray-600 dark:text-white py-2 px-3" />
+                      }
+                      @case ('lista') {
+                        <select disabled class="mt-1 block w-full shadow-sm sm:text-sm border-gray-300 rounded-md bg-gray-50 dark:bg-gray-700 dark:border-gray-600 dark:text-white py-2 px-3">
+                          <option value="" disabled selected>Selecciona una opción...</option>
+                          @for (opt of campo.opciones; track opt) {
+                            <option>{{ opt }}</option>
+                          }
+                        </select>
+                        <div class="mt-3">
+                          <label [for]="'opciones-lista-' + campo.id" class="block text-xs font-medium text-gray-500 dark:text-gray-400">Opciones del selector (separadas por coma)</label>
+                          <input
+                            [id]="'opciones-lista-' + campo.id"
+                            [ngModel]="campo.opciones?.join(', ')"
+                            (ngModelChange)="parsearOpciones(campo, $event)"
+                            type="text"
+                            placeholder="Opción 1, Opción 2, Opción 3"
+                            class="mt-1 block w-full shadow-sm focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm border-gray-300 rounded-md dark:bg-gray-700 dark:border-gray-600 dark:text-white py-1.5 px-3 transition-colors"
+                          />
+                        </div>
+                      }
+                      @case ('checkbox') {
+                        <div class="mt-1 space-y-2">
+                          @for (opt of campo.opciones; track opt) {
+                            <label class="flex cursor-default items-center gap-2">
+                              <input type="checkbox" disabled class="h-4 w-4 rounded border-gray-300 text-indigo-600" />
+                              <span class="text-sm text-gray-600 dark:text-gray-400">{{ opt }}</span>
+                            </label>
+                          }
+                        </div>
+                        <div class="mt-3">
+                          <label [for]="'opciones-checkbox-' + campo.id" class="block text-xs font-medium text-gray-500 dark:text-gray-400">Opciones del checklist (separadas por coma)</label>
+                          <input
+                            [id]="'opciones-checkbox-' + campo.id"
+                            [ngModel]="campo.opciones?.join(', ')"
+                            (ngModelChange)="parsearOpciones(campo, $event)"
+                            type="text"
+                            placeholder="Opción A, Opción B, Opción C"
+                            class="mt-1 block w-full shadow-sm focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm border-gray-300 rounded-md dark:bg-gray-700 dark:border-gray-600 dark:text-white py-1.5 px-3 transition-colors"
+                          />
+                        </div>
+                      }
+                      @case ('tabla') {
+                        <div class="overflow-x-auto mt-2 border border-gray-200 dark:border-gray-700 rounded-lg">
+                          <table class="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
+                            <thead class="bg-gray-50 dark:bg-gray-800">
+                              <tr>
+                                @for (col of campo.opciones; track $index) {
+                                  <th class="px-4 py-2 text-left text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase">{{ col }}</th>
+                                }
+                                <th class="px-4 py-2 text-right text-xs font-semibold text-gray-500 dark:text-gray-400">Acción</th>
+                              </tr>
+                            </thead>
+                            <tbody class="bg-white dark:bg-gray-900 divide-y divide-gray-200 dark:divide-gray-700">
+                              <tr>
+                                @for (col of campo.opciones; track $index) {
+                                  <td class="px-4 py-2">
+                                    <input type="text" disabled placeholder="..." class="w-full text-xs border-gray-300 dark:border-gray-700 rounded bg-gray-50 dark:bg-gray-800 py-1 px-2" />
+                                  </td>
+                                }
+                                <td class="px-4 py-2 text-right">
+                                  <button type="button" disabled class="text-xs text-red-400">✕</button>
+                                </td>
+                              </tr>
+                            </tbody>
+                          </table>
+                        </div>
+                        <div class="mt-3">
+                          <label [for]="'columnas-tabla-' + campo.id" class="block text-xs font-medium text-gray-500 dark:text-gray-400">Nombres de columnas de la tabla (separados por coma)</label>
+                          <input
+                            [id]="'columnas-tabla-' + campo.id"
+                            [ngModel]="campo.opciones?.join(', ')"
+                            (ngModelChange)="parsearOpciones(campo, $event)"
+                            type="text"
+                            placeholder="Producto, Cantidad, Precio"
+                            class="mt-1 block w-full shadow-sm focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm border-gray-300 rounded-md dark:bg-gray-700 dark:border-gray-600 dark:text-white py-1.5 px-3 transition-colors"
+                          />
+                        </div>
+                      }
+                      @case ('boton') {
+                        <div class="mt-2 flex flex-wrap items-center gap-3">
+                          <button
+                            type="button"
+                            disabled
+                            class="inline-flex w-auto items-center justify-center whitespace-nowrap px-4 py-2 text-sm font-medium rounded-md shadow-sm transition-colors"
+                            [class]="esBotonPrimario(campo)
+                              ? 'border border-transparent text-white bg-indigo-600'
+                              : 'border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 bg-white dark:bg-gray-800'">
+                            {{ campo.etiqueta }}
+                          </button>
+                        </div>
+                        <div class="mt-3">
+                          <label [for]="'estilo-' + campo.id" class="block text-xs font-medium text-gray-500 dark:text-gray-400">Estilo del botón</label>
+                          <select
+                            [id]="'estilo-' + campo.id"
+                            [(ngModel)]="campo.placeholder"
+                            class="mt-1 block w-full shadow-sm focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm border-gray-300 rounded-md dark:bg-gray-700 dark:border-gray-600 dark:text-white py-1.5 px-3">
+                            <option value="primario">Primario (indigo)</option>
+                            <option value="secundario">Secundario (outline)</option>
+                          </select>
+                        </div>
+                      }
+                    }
+                  </div>
                 </div>
-                <input
-                  [ngModel]="campo.opciones?.join(', ')"
-                  (ngModelChange)="parsearOpciones(campo, $event)"
-                  type="text"
-                  placeholder="Opciones: Sí, No, Tal vez"
-                  class="mt-2 block w-full shadow-sm focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm border-gray-300 rounded-md dark:bg-gray-700 dark:border-gray-600 dark:text-white py-2 px-3"
-                />
-              }
-              @case ('boton') {
-                <div class="mt-2 flex flex-wrap items-center gap-3">
-                  <button
-                    type="button"
-                    disabled
-                    class="inline-flex w-auto items-center justify-center whitespace-nowrap px-4 py-2 text-sm font-medium rounded-md shadow-sm transition-colors"
-                    [class]="esBotonPrimario(campo)
-                      ? 'border border-transparent text-white bg-indigo-600'
-                      : 'border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 bg-white dark:bg-gray-800'">
-                    {{ campo.etiqueta }}
-                  </button>
-                </div>
-                <div class="mt-2">
-                  <label [for]="'estilo-' + campo.id" class="block text-xs font-medium text-gray-600 dark:text-gray-400">Estilo del botón</label>
-                  <select
-                    [id]="'estilo-' + campo.id"
-                    [(ngModel)]="campo.placeholder"
-                    class="mt-1 block w-full shadow-sm focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm border-gray-300 rounded-md dark:bg-gray-700 dark:border-gray-600 dark:text-white py-2 px-3">
-                    <option value="primario">Primario (indigo)</option>
-                    <option value="secundario">Secundario (outline)</option>
-                  </select>
-                </div>
-              }
+              </div>
             }
           </div>
         }
       </div>
-    }
+    </div>
   </div>
 
-  <div class="mt-5 sm:mt-6 border-t border-gray-200 pt-4 dark:border-gray-700">
-    <div class="sm:grid sm:grid-cols-2 sm:gap-3 sm:grid-flow-row-dense">
+  <!-- Footer Fijo con Acciones Guardar/Cancelar -->
+  <div class="mt-6 border-t border-gray-200 pt-4 dark:border-gray-700">
+    <div class="flex flex-col-reverse sm:flex-row sm:justify-end gap-3">
+      <button
+        type="button"
+        (click)="cancelar()"
+        class="w-full sm:w-auto inline-flex items-center justify-center whitespace-nowrap rounded-md border border-gray-300 dark:border-gray-600 shadow-sm px-5 py-2.5 bg-white dark:bg-gray-800 text-sm font-medium text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors">
+        Cancelar
+      </button>
       <button
         type="button"
         (click)="guardar()"
         [disabled]="!formNombre.trim() || guardando()"
-        class="w-full inline-flex items-center justify-center whitespace-nowrap rounded-md border border-transparent shadow-sm px-4 py-2 bg-indigo-600 text-sm font-medium text-white hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 sm:col-start-2 disabled:opacity-50 transition-colors">
+        class="w-full sm:w-auto inline-flex items-center justify-center whitespace-nowrap rounded-md border border-transparent shadow-sm px-5 py-2.5 bg-indigo-600 text-sm font-medium text-white hover:bg-indigo-700 disabled:opacity-50 transition-colors">
         {{ guardando() ? 'Guardando...' : guardarLabel() }}
-      </button>
-      <button
-        type="button"
-        (click)="cancelar()"
-        class="mt-3 w-full inline-flex items-center justify-center whitespace-nowrap rounded-md border border-gray-300 dark:border-gray-600 shadow-sm px-4 py-2 bg-white dark:bg-gray-800 text-sm font-medium text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 sm:mt-0 sm:col-start-1 transition-colors">
-        Cancelar
       </button>
     </div>
   </div>

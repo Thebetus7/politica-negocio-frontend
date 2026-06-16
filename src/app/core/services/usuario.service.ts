@@ -3,12 +3,14 @@ import { HttpClient } from '@angular/common/http';
 import { tap } from 'rxjs';
 import { User } from './auth.service';
 
+import { API_URL } from './api-config';
+
 @Injectable({
   providedIn: 'root'
 })
 export class UsuarioService {
   private http = inject(HttpClient);
-  private apiUrl = 'http://localhost:8081/api/usuarios';
+  private apiUrl = `${API_URL}/usuarios`;
 
   usuarios = signal<User[]>([]);
 

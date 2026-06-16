@@ -1,6 +1,7 @@
 import { Injectable, inject, signal } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { tap } from 'rxjs';
+import { API_URL } from './api-config';
 
 export interface Portafolio {
   id?: string;
@@ -15,7 +16,7 @@ export interface Portafolio {
 })
 export class PortafolioService {
   private http = inject(HttpClient);
-  private apiUrl = 'http://localhost:8081/api/portafolios';
+  private apiUrl = `${API_URL}/portafolios`;
 
   portafolios = signal<Portafolio[]>([]);
 

@@ -7,10 +7,12 @@ export interface FuncionarioDepa {
   departamentoId: string;
 }
 
+import { API_URL } from './api-config';
+
 @Injectable({ providedIn: 'root' })
 export class FuncionarioDepaService {
   private http = inject(HttpClient);
-  private apiUrl = 'http://localhost:8081/api/funcionarios-depa';
+  private apiUrl = `${API_URL}/funcionarios-depa`;
 
   getByDepartamento(departamentoId: string) {
     return this.http.get<FuncionarioDepa[]>(`${this.apiUrl}?departamentoId=${departamentoId}`);

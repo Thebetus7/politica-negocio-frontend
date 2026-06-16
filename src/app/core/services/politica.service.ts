@@ -11,10 +11,12 @@ export interface PoliticaNegocio {
   updatedAt?: string;
 }
 
+import { API_URL } from './api-config';
+
 @Injectable({ providedIn: 'root' })
 export class PoliticaService {
   private http = inject(HttpClient);
-  private apiUrl = 'http://localhost:8081/api/politicas';
+  private apiUrl = `${API_URL}/politicas`;
 
   politicas = signal<PoliticaNegocio[]>([]);
   loading = signal(false);

@@ -9,10 +9,12 @@ export interface Flujo {
   createdAt?: string;
 }
 
+import { API_URL } from './api-config';
+
 @Injectable({ providedIn: 'root' })
 export class FlujoService {
   private http = inject(HttpClient);
-  private baseUrl = 'http://localhost:8081/api/politicas';
+  private baseUrl = `${API_URL}/politicas`;
 
   getByPolitica(politicaId: string) {
     return this.http.get<Flujo[]>(`${this.baseUrl}/${politicaId}/flujos`);

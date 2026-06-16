@@ -20,10 +20,12 @@ export interface LogPolitica {
   createdAt?: string;
 }
 
+import { API_URL } from './api-config';
+
 @Injectable({ providedIn: 'root' })
 export class LogPoliticaService {
   private http = inject(HttpClient);
-  private baseUrl = 'http://localhost:8081/api/politicas';
+  private baseUrl = `${API_URL}/politicas`;
 
   compile(politicaId: string) {
     return this.http.post<LogPoliticaCompileResult>(

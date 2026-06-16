@@ -15,6 +15,7 @@ export class FormularioListComponent implements OnInit {
   modalAbierto = signal(false);
   modoEdicion = signal(false);
   builderInicial = signal<Formulario | null>(null);
+  cargandoBuilder = signal(false);
 
   ngOnInit() {
     this.svc.getAll().subscribe();
@@ -22,21 +23,43 @@ export class FormularioListComponent implements OnInit {
 
   abrirCrear() {
     this.modoEdicion.set(false);
+    this.cargandoBuilder.set(false);
     this.builderInicial.set(null);
     this.modalAbierto.set(true);
   }
 
   abrirEditar(f: Formulario) {
+    if (!f.id) return;
     this.modoEdicion.set(true);
-    this.builderInicial.set(JSON.parse(JSON.stringify(f)));
     this.modalAbierto.set(true);
+    this.cargandoBuilder.set(true);
+    this.builderInicial.set(null);
+    this.svc.getById(f.id).subscribe({
+      next: (completo) => {
+        this.builderInicial.set({
+          ...completo,
+          campos: Array.isArray(completo.campos) ? completo.campos : [],
+        });
+        this.cargandoBuilder.set(false);
+      },
+      error: () => {
+        this.builderInicial.set({
+          ...f,
+          campos: Array.isArray(f.campos) ? f.campos : [],
+        });
+        this.cargandoBuilder.set(false);
+      },
+    });
   }
 
   cerrarModal() {
     this.modalAbierto.set(false);
+    this.builderInicial.set(null);
+    this.cargandoBuilder.set(false);
   }
 
   onBuilderSaved() {
+    this.svc.getAll().subscribe();
     this.cerrarModal();
   }
 

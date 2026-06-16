@@ -57,9 +57,7 @@
         },
         "serve": {
           "builder": "@angular-devkit/build-angular:dev-server",
-          "options": {
-            "disableHostCheck": true
-          },
+          "options": {},
           "configurations": {
             "production": {
               "buildTarget": "politica-negocio-frontend:build:production"

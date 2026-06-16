@@ -10,12 +10,14 @@ export interface Departamento {
   createdAt?: string;
 }
 
+import { API_URL } from './api-config';
+
 @Injectable({
   providedIn: 'root'
 })
 export class DepartamentoService {
   private http = inject(HttpClient);
-  private apiUrl = 'http://localhost:8081/api/departamentos';
+  private apiUrl = `${API_URL}/departamentos`;
 
   departamentos = signal<Departamento[]>([]);
 

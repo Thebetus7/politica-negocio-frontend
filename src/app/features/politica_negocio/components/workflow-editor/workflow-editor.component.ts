@@ -48,6 +48,8 @@ interface WorkflowNode {
   iterativoTipo?: 'while_do' | 'do_while';
   /** Condición mostrada en decision / pregunta */
   condicion?: string;
+  /** Actividad a la que retorna el bucle (nodo pregunta) */
+  retornoActividadId?: string;
 }
 
 interface WorkflowLink {
@@ -147,6 +149,13 @@ export class WorkflowEditorComponent implements OnInit, AfterViewInit, OnDestroy
   flujoValido = signal<boolean | null>(null);
   flujoVersion = signal<number | null>(null);
   flujoMensaje = signal<string>('');
+  flujoJson = signal<Record<string, unknown> | null>(null);
+  ultimoFlujoValidoJson = signal<Record<string, unknown> | null>(null);
+  ultimoFlujoValidoVersion = signal<number | null>(null);
+  showFlujoModal = signal(false);
+  modalFlujoJson = signal<Record<string, unknown> | null>(null);
+  modalFlujoVersion = signal<number | null>(null);
+  modalEsIncompleto = signal(false);
 
   /** Valor especial en el select de formulario */
   readonly FORM_CREATE_OPTION = '__create__';
@@ -161,6 +170,8 @@ export class WorkflowEditorComponent implements OnInit, AfterViewInit, OnDestroy
   private resizeObserver?: ResizeObserver;
   private isSyncingScroll = false;
   private initialCenterApplied = false;
+  private refreshFlujoTimer?: ReturnType<typeof setTimeout>;
+  private dragDepaInicio?: string;
 
   // Lane layout
   private readonly defaultLaneWidth = 250;
@@ -237,6 +248,9 @@ export class WorkflowEditorComponent implements OnInit, AfterViewInit, OnDestroy
   }
 
   ngOnDestroy(): void {
+    if (this.refreshFlujoTimer) {
+      clearTimeout(this.refreshFlujoTimer);
+    }
     this.resizeObserver?.disconnect();
     this.diagramService.disconnect();
     this.subs.forEach(s => s.unsubscribe());
@@ -309,6 +323,7 @@ export class WorkflowEditorComponent implements OnInit, AfterViewInit, OnDestroy
           const data = this.parseNodeEstadoMeta(a.estado);
           newNode.iterativoTipo = data.iterativoTipo === 'do_while' ? 'do_while' : 'while_do';
           newNode.condicion = data.condicion || newNode.nombre;
+          newNode.retornoActividadId = data.retornoActividadId;
         } else if (tipo === 'decision') {
           const data = this.parseNodeEstadoMeta(a.estado);
           newNode.condicion = data.condicion || newNode.nombre;
@@ -461,6 +476,7 @@ export class WorkflowEditorComponent implements OnInit, AfterViewInit, OnDestroy
     
     this.isDragging = true;
     this.dragNode = node;
+    this.dragDepaInicio = node.departamentoId;
     const pt = this.screenToSvg(event.clientX, event.clientY);
     this.dragOffset = { x: pt.x - node.x, y: pt.y - node.y };
   }
@@ -562,12 +578,17 @@ export class WorkflowEditorComponent implements OnInit, AfterViewInit, OnDestroy
           ejeY: String(this.dragNode.y),
           tipoNodo: this.dragNode.tipo,
         };
+        const poolChanged = this.dragDepaInicio !== this.dragNode.departamentoId;
         this.actividadService.update(this.politicaId, this.dragNode.id, actividad).subscribe(() => {
           this.broadcastUpdate();
+          if (poolChanged) {
+            this.refreshFlujoEstado();
+          }
         });
       }
       this.isDragging = false;
       this.dragNode = null;
+      this.dragDepaInicio = undefined;
     }
 
     if (this.isResizing && this.resizingNode) {
@@ -671,6 +692,13 @@ export class WorkflowEditorComponent implements OnInit, AfterViewInit, OnDestroy
       return;
     }
 
+    const validationError = this.validateConnection(this.connectionSource, targetNode);
+    if (validationError) {
+      this.showConnectionError(validationError);
+      this.cancelConnection();
+      return;
+    }
+
     const computedTipo = this.computeLinkTipo(this.connectionSource);
     const label = this.computeLinkLabel(this.connectionSource, computedTipo);
 
@@ -700,7 +728,9 @@ export class WorkflowEditorComponent implements OnInit, AfterViewInit, OnDestroy
         this.links.update(list =>
           list.map(l => l === newLink ? { ...l, id: saved.id! } : l)
         );
+        this.persistPreguntaRetornoAfterConnection(this.connectionSource!, targetNode);
         this.broadcastUpdate();
+        this.refreshFlujoEstado();
       });
     }
 
@@ -778,6 +808,7 @@ export class WorkflowEditorComponent implements OnInit, AfterViewInit, OnDestroy
   clearSelection(): void {
     this.selectedNode.set(null);
     this.selectedLink.set(null);
+    this.showPropertiesPanel.set(false);
   }
 
   onCanvasClick(): void {
@@ -815,11 +846,14 @@ export class WorkflowEditorComponent implements OnInit, AfterViewInit, OnDestroy
 
   cerrarFormularioBuilder(): void {
     this.showFormularioBuilder.set(false);
+    this.formularioBuilderInicial.set(null);
     this.editNodeFormId = this.selectedNode()?.formularioId || '';
   }
 
   onFormularioCreadoDesdeActividad(form: Formulario): void {
     this.showFormularioBuilder.set(false);
+    this.formularioBuilderInicial.set(null);
+    this.formularioService.getAll().subscribe();
     if (form.id) {
       this.editNodeFormId = form.id;
       this.updateNodeProperties(true);
@@ -887,6 +921,7 @@ export class WorkflowEditorComponent implements OnInit, AfterViewInit, OnDestroy
       };
       this.actividadService.update(this.politicaId, node.id, actividad).subscribe(() => {
         this.broadcastUpdate();
+        this.refreshFlujoEstado();
       });
     };
 
@@ -949,6 +984,7 @@ export class WorkflowEditorComponent implements OnInit, AfterViewInit, OnDestroy
     };
     this.flujoService.update(this.politicaId, link.id, flujo).subscribe(() => {
       this.broadcastUpdate();
+      this.refreshFlujoEstado();
     });
   }
 
@@ -969,6 +1005,7 @@ export class WorkflowEditorComponent implements OnInit, AfterViewInit, OnDestroy
           // Eliminar links asociados
           this.links.update(list => list.filter(l => l.sourceId !== node.id && l.targetId !== node.id));
           this.broadcastUpdate();
+          this.refreshFlujoEstado();
         });
       } else {
         this.nodes.update(list => list.filter(n => n.tempId !== node.tempId));
@@ -983,6 +1020,7 @@ export class WorkflowEditorComponent implements OnInit, AfterViewInit, OnDestroy
         this.flujoService.softDelete(this.politicaId, link.id).subscribe(() => {
           this.links.update(list => list.filter(l => l !== link));
           this.broadcastUpdate();
+          this.refreshFlujoEstado();
         });
       } else {
         this.links.update(list => list.filter(l => l !== link));
@@ -1211,7 +1249,7 @@ export class WorkflowEditorComponent implements OnInit, AfterViewInit, OnDestroy
       // Recargar del servidor para evitar conflictos
       this.loadActividades();
       this.loadFlujos();
-      this.loadFlujoEstado();
+      this.refreshFlujoEstado();
     }
   }
 
@@ -1256,46 +1294,286 @@ export class WorkflowEditorComponent implements OnInit, AfterViewInit, OnDestroy
   saveDiagram(): void {
     this.broadcastUpdate();
     this.logPoliticaService.compile(this.politicaId).subscribe({
-      next: (result) => {
-        this.flujoValido.set(result.valido);
-        this.flujoVersion.set(result.version ?? null);
-        this.flujoMensaje.set(result.mensaje ?? '');
-        if (result.valido) {
-          alert(`Flujo válido guardado (versión ${result.version})`);
-        } else {
-          alert(`Flujo incompleto: ${result.mensaje ?? 'Revise conexiones hasta Fin'}`);
-        }
-      },
+      next: (result) => this.applyCompileResult(result),
       error: () => {
         this.flujoValido.set(false);
         this.flujoMensaje.set('Error al compilar el flujo');
-        alert('Error al compilar el flujo. Verifique que el backend esté activo.');
       }
     });
+  }
+
+  abrirModalFlujo(): void {
+    const esIncompleto = this.flujoValido() === false;
+    this.modalEsIncompleto.set(esIncompleto);
+
+    if (!esIncompleto && this.flujoJson()) {
+      this.modalFlujoJson.set(this.flujoJson());
+      this.modalFlujoVersion.set(this.flujoVersion());
+      this.showFlujoModal.set(true);
+      return;
+    }
+
+    if (!esIncompleto) {
+      this.logPoliticaService.getUltimo(this.politicaId).subscribe({
+        next: (log) => {
+          this.modalFlujoJson.set(log.flujoJson ?? null);
+          this.modalFlujoVersion.set(log.version);
+          this.showFlujoModal.set(true);
+        },
+        error: () => {
+          this.modalFlujoJson.set(null);
+          this.modalFlujoVersion.set(null);
+          this.showFlujoModal.set(true);
+        }
+      });
+      return;
+    }
+
+    this.modalFlujoJson.set(this.flujoJson());
+    this.modalFlujoVersion.set(this.flujoVersion());
+    if (!this.ultimoFlujoValidoJson()) {
+      this.logPoliticaService.getUltimo(this.politicaId).subscribe({
+        next: (log) => {
+          this.ultimoFlujoValidoJson.set(log.flujoJson ?? null);
+          this.ultimoFlujoValidoVersion.set(log.version);
+          this.showFlujoModal.set(true);
+        },
+        error: () => this.showFlujoModal.set(true)
+      });
+    } else {
+      this.showFlujoModal.set(true);
+    }
+  }
+
+  cerrarModalFlujo(): void {
+    this.showFlujoModal.set(false);
+  }
+
+  flujoJsonTexto(json: Record<string, unknown> | null): string {
+    if (!json) return '';
+    return JSON.stringify(json, null, 2);
+  }
+
+  copiarFlujoJson(json: Record<string, unknown> | null): void {
+    const text = this.flujoJsonTexto(json);
+    if (!text) return;
+    navigator.clipboard.writeText(text).catch(() => undefined);
+  }
+
+  private refreshFlujoEstado(): void {
+    if (this.refreshFlujoTimer) {
+      clearTimeout(this.refreshFlujoTimer);
+    }
+    this.refreshFlujoTimer = setTimeout(() => {
+      this.logPoliticaService.compile(this.politicaId).subscribe({
+        next: (result) => this.applyCompileResult(result),
+        error: () => {
+          this.loadFlujoEstado();
+        }
+      });
+    }, 400);
+  }
+
+  private applyCompileResult(result: {
+    valido: boolean;
+    version?: number;
+    mensaje?: string;
+    flujoJson?: Record<string, unknown>;
+  }): void {
+    this.flujoValido.set(result.valido);
+    this.flujoVersion.set(result.version ?? null);
+    this.flujoMensaje.set(result.mensaje ?? '');
+
+    if (result.valido && result.flujoJson) {
+      this.flujoJson.set(result.flujoJson);
+      this.ultimoFlujoValidoJson.set(result.flujoJson);
+      this.ultimoFlujoValidoVersion.set(result.version ?? null);
+    } else if (!result.valido) {
+      this.flujoJson.set(null);
+      this.loadUltimoFlujoValidoCache();
+    }
   }
 
   private loadFlujoEstado(): void {
     this.logPoliticaService.getUltimo(this.politicaId).subscribe({
       next: (log) => {
-        this.flujoValido.set(log.valido && log.funcional);
+        const activo = log.valido && log.funcional;
+        this.flujoValido.set(activo);
         this.flujoVersion.set(log.version);
         this.flujoMensaje.set(log.mensajeValidacion ?? 'Flujo activo');
+        if (activo && log.flujoJson) {
+          this.flujoJson.set(log.flujoJson);
+          this.ultimoFlujoValidoJson.set(log.flujoJson);
+          this.ultimoFlujoValidoVersion.set(log.version);
+        }
       },
       error: () => {
         this.flujoValido.set(null);
         this.flujoVersion.set(null);
         this.flujoMensaje.set('Sin flujo compilado');
+        this.flujoJson.set(null);
       }
     });
   }
 
-  private parseNodeEstadoMeta(estado: unknown): { iterativoTipo?: string; condicion?: string } {
+  private loadUltimoFlujoValidoCache(): void {
+    this.logPoliticaService.getUltimo(this.politicaId).subscribe({
+      next: (log) => {
+        if (log.valido && log.funcional && log.flujoJson) {
+          this.ultimoFlujoValidoJson.set(log.flujoJson);
+          this.ultimoFlujoValidoVersion.set(log.version);
+        }
+      }
+    });
+  }
+
+  private showConnectionError(mensaje: string): void {
+    this.flujoMensaje.set(mensaje);
+    alert(mensaje);
+  }
+
+  private getNodeKey(node: WorkflowNode): string {
+    return node.id || node.tempId;
+  }
+
+  private findNodeByKey(key: string): WorkflowNode | undefined {
+    return this.nodes().find(n => (n.id || n.tempId) === key);
+  }
+
+  private getOutgoingLinks(sourceKey: string): WorkflowLink[] {
+    return this.links().filter(l => l.sourceId === sourceKey);
+  }
+
+  private validateConnection(source: WorkflowNode, target: WorkflowNode): string | null {
+    const sourceKey = this.getNodeKey(source);
+    const targetKey = this.getNodeKey(target);
+
+    if (sourceKey === targetKey) {
+      return 'No se puede conectar un nodo consigo mismo';
+    }
+
+    if (this.links().some(l => l.sourceId === sourceKey && l.targetId === targetKey)) {
+      return 'Ya existe una conexión entre estos nodos';
+    }
+
+    if (source.tipo === 'decision') {
+      if (this.getOutgoingLinks(sourceKey).length >= 2) {
+        return 'La decisión solo puede tener exactamente 2 conexiones';
+      }
+      if (target.tipo !== 'actividad' && target.tipo !== 'fin') {
+        return 'La decisión solo puede conectarse a una actividad o a Fin';
+      }
+      const existingTargets = this.getOutgoingLinks(sourceKey)
+        .map(l => this.findNodeByKey(l.targetId))
+        .filter((n): n is WorkflowNode => !!n);
+      const allTargets = [...existingTargets, target];
+      if (allTargets.length === 2 && allTargets.every(n => n.tipo === 'fin')) {
+        return 'La decisión no puede tener ambas ramas hacia Fin';
+      }
+    }
+
+    const outgoingCount = this.getOutgoingLinks(sourceKey).length;
+    if (outgoingCount >= 1 && target.tipo === 'fin' && source.tipo !== 'decision' && source.tipo !== 'pregunta') {
+      return 'En conexión paralela no se puede conectar directamente a Fin';
+    }
+
+    if (outgoingCount >= 1 && source.tipo === 'actividad' && target.tipo !== 'actividad') {
+      return 'En conexión paralela solo se puede conectar a actividades';
+    }
+
+    if (this.wouldCreateCycleWithoutPregunta(source, target)) {
+      return 'Para volver a una actividad anterior use un nodo Pregunta (while/do-while)';
+    }
+
+    return null;
+  }
+
+  private wouldCreateCycleWithoutPregunta(source: WorkflowNode, target: WorkflowNode): boolean {
+    const sourceKey = this.getNodeKey(source);
+    const targetKey = this.getNodeKey(target);
+    if (!this.canReachFrom(targetKey, sourceKey)) {
+      return false;
+    }
+
+    const cycleNodes = this.collectCycleNodes(sourceKey, targetKey);
+    const hasPregunta = cycleNodes.some(id => {
+      const n = this.findNodeByKey(id);
+      return n?.tipo === 'pregunta';
+    });
+    return !hasPregunta;
+  }
+
+  private canReachFrom(fromKey: string, toKey: string): boolean {
+    const visited = new Set<string>();
+    const queue = [fromKey];
+    while (queue.length > 0) {
+      const id = queue.shift()!;
+      if (!visited.add(id)) continue;
+      if (id === toKey) return true;
+      for (const link of this.getOutgoingLinks(id)) {
+        queue.push(link.targetId);
+      }
+    }
+    return false;
+  }
+
+  private collectCycleNodes(sourceKey: string, targetKey: string): string[] {
+    const path: string[] = [];
+    const visited = new Set<string>();
+
+    const dfs = (nodeId: string): string[] | null => {
+      visited.add(nodeId);
+      path.push(nodeId);
+
+      for (const link of this.getOutgoingLinks(nodeId)) {
+        const next = link.targetId;
+        if (next === targetKey && nodeId === sourceKey) {
+          return [...path, next];
+        }
+        if (next === sourceKey && path.includes(targetKey)) {
+          const start = path.indexOf(targetKey);
+          return start >= 0 ? path.slice(start) : path;
+        }
+        if (!visited.has(next) || next === sourceKey) {
+          if (next === sourceKey) {
+            const start = path.indexOf(sourceKey);
+            return start >= 0 ? [...path.slice(start), next] : path;
+          }
+          const found = dfs(next);
+          if (found) return found;
+        }
+      }
+
+      path.pop();
+      return null;
+    };
+
+    return dfs(targetKey) ?? [sourceKey, targetKey];
+  }
+
+  private persistPreguntaRetornoAfterConnection(source: WorkflowNode, target: WorkflowNode): void {
+    if (target.tipo !== 'pregunta' || source.tipo !== 'actividad' || !target.id || !source.id) {
+      return;
+    }
+    target.retornoActividadId = source.id;
+    this.nodes.update(list =>
+      list.map(n => n.id === target.id ? { ...n, retornoActividadId: source.id } : n)
+    );
+    this.persistNodeAndFormUpdate(target);
+  }
+
+  private parseNodeEstadoMeta(estado: unknown): {
+    iterativoTipo?: string;
+    condicion?: string;
+    retornoActividadId?: string;
+  } {
     if (!estado) return {};
     if (typeof estado === 'object' && estado !== null) {
       const o = estado as Record<string, unknown>;
       return {
         iterativoTipo: o['iterativoTipo'] as string | undefined,
-        condicion: o['condicion'] as string | undefined
+        condicion: o['condicion'] as string | undefined,
+        retornoActividadId: o['retornoActividadId'] as string | undefined
       };
     }
     if (typeof estado === 'string' && estado.trim().startsWith('{')) {
@@ -1321,10 +1599,14 @@ export class WorkflowEditorComponent implements OnInit, AfterViewInit, OnDestroy
       return JSON.stringify({ subNombre: node.subNombre || '«datastore»' });
     }
     if (node.tipo === 'pregunta') {
-      return JSON.stringify({
+      const estado: Record<string, string> = {
         iterativoTipo: node.iterativoTipo || 'while_do',
         condicion: node.condicion || node.nombre
-      });
+      };
+      if (node.retornoActividadId) {
+        estado['retornoActividadId'] = node.retornoActividadId;
+      }
+      return JSON.stringify(estado);
     }
     if (node.tipo === 'decision') {
       return JSON.stringify({ condicion: node.condicion || node.nombre });

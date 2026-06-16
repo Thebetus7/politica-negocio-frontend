@@ -41,7 +41,7 @@ import { AuthService } from '../../core/services/auth.service';
         }
 
         <!-- Sección para Atención al Cliente -->
-        @if (authService.hasRole('ATENCION_AL_CLIENTE')) {
+        @if (authService.hasRole('ATENCION_CLIENTE')) {
           <div class="bg-white dark:bg-gray-700 p-6 rounded-xl shadow-sm border border-gray-100 dark:border-gray-600">
             <div class="flex items-center">
               <div class="p-3 bg-green-100 dark:bg-green-900/50 rounded-lg">
@@ -93,6 +93,23 @@ import { AuthService } from '../../core/services/auth.service';
             </p>
             <div class="mt-4">
               <a routerLink="/formularios" class="text-orange-600 dark:text-orange-400 font-bold hover:underline">Gestionar Formularios &rarr;</a>
+            </div>
+          </div>
+        }
+
+        @if (authService.hasRole('FUNCIONARIO')) {
+          <div class="bg-white dark:bg-gray-700 p-6 rounded-xl shadow-sm border border-gray-100 dark:border-gray-600">
+            <div class="flex items-center">
+              <div class="p-3 bg-purple-100 dark:bg-purple-900/50 rounded-lg">
+                <svg fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" viewBox="0 0 24 24" class="w-8 h-8 text-purple-600 dark:text-purple-400"><path d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"></path></svg>
+              </div>
+              <h2 class="ms-3 text-xl font-semibold text-gray-900 dark:text-gray-100">Tareas Pendientes</h2>
+            </div>
+            <p class="mt-4 text-gray-500 dark:text-gray-400 text-sm leading-relaxed">
+              Revisa y completa formularios asignados a tu departamento en trámites activos.
+            </p>
+            <div class="mt-4">
+              <a routerLink="/tareas" class="text-purple-600 dark:text-purple-400 font-bold hover:underline">Ver Tareas &rarr;</a>
             </div>
           </div>
         }

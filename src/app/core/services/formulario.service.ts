@@ -3,11 +3,13 @@ import { HttpClient } from '@angular/common/http';
 import { tap } from 'rxjs';
 export interface CampoFormulario {
   id: string;            // UUID generado en frontend para trackear
-  tipo: 'texto' | 'texto_largo' | 'numero' | 'fecha' | 'lista' | 'checkbox' | 'radio' | 'boton' | 'email';
+  tipo: 'texto' | 'texto_largo' | 'numero' | 'fecha' | 'lista' | 'checkbox' | 'radio' | 'boton' | 'email' | 'archivo' | 'tabla';
   etiqueta: string;
   placeholder?: string;
   requerido: boolean;
-  opciones?: string[];   // para lista, radio
+  opciones?: string[];   // para lista, radio, tabla (columnas)
+  accept?: string;       // para archivo: .pdf,.jpg
+  tamanoMaxMb?: number;
   orden: number;
 }
 
@@ -20,10 +22,12 @@ export interface Formulario {
   updatedAt?: string;
 }
 
+import { API_URL } from './api-config';
+
 @Injectable({ providedIn: 'root' })
 export class FormularioService {
   private http = inject(HttpClient);
-  private apiUrl = 'http://localhost:8081/api/formularios';
+  private apiUrl = `${API_URL}/formularios`;
 
   formularios = signal<Formulario[]>([]);
   loading = signal(false);
@@ -62,5 +66,9 @@ export class FormularioService {
         this.formularios.update(list => list.filter(f => f.id !== id));
       })
     );
+  }
+
+  getById(id: string) {
+    return this.http.get<Formulario>(`${this.apiUrl}/${id}`);
   }
 }

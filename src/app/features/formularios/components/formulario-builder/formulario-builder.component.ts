@@ -13,6 +13,9 @@ type TipoCampo = CampoFormulario['tipo'];
   standalone: true,
   imports: [FormsModule],
   templateUrl: './formulario-builder.component.html',
+  host: {
+    class: 'flex flex-1 flex-col min-h-0 w-full'
+  }
 })
 export class FormularioBuilderComponent {
   private svc = inject(FormularioService);
@@ -32,23 +35,39 @@ export class FormularioBuilderComponent {
   formDescripcion = '';
   camposForm = signal<CampoFormulario[]>([]);
   private editandoId: string | null = null;
+  private ultimoInicialRef: Formulario | null | undefined;
 
   tiposDisponibles = [
-    { tipo: 'texto' as TipoCampo, label: 'Texto', icono: '✏️' },
-    { tipo: 'texto_largo' as TipoCampo, label: 'Párrafo', icono: '📄' },
+    { tipo: 'checkbox' as TipoCampo, label: 'Checklist', icono: '☑️' },
+    { tipo: 'lista' as TipoCampo, label: 'Selector', icono: '📋' },
+    { tipo: 'tabla' as TipoCampo, label: 'Tabla / Grid', icono: '📊' },
+    { tipo: 'texto' as TipoCampo, label: 'Texto Corto', icono: '✏️' },
+    { tipo: 'texto_largo' as TipoCampo, label: 'Texto Largo', icono: '📝' },
     { tipo: 'numero' as TipoCampo, label: 'Número', icono: '🔢' },
     { tipo: 'fecha' as TipoCampo, label: 'Fecha', icono: '📅' },
-    { tipo: 'email' as TipoCampo, label: 'Email', icono: '📧' },
-    { tipo: 'lista' as TipoCampo, label: 'Lista', icono: '📋' },
-    { tipo: 'checkbox' as TipoCampo, label: 'Checkbox', icono: '☑️' },
-    { tipo: 'radio' as TipoCampo, label: 'Opciones', icono: '🔘' },
     { tipo: 'boton' as TipoCampo, label: 'Botón', icono: '▶️' },
   ];
 
   constructor() {
     effect(() => {
-      this.cargarDesde(this.formularioInicial());
-    });
+      const inicial = this.formularioInicial();
+      if (inicial === this.ultimoInicialRef) return;
+      this.ultimoInicialRef = inicial;
+      this.cargarDesde(inicial);
+    }, { allowSignalWrites: true });
+  }
+
+  private normalizarCamposEntrada(campos: CampoFormulario[] | undefined | null): CampoFormulario[] {
+    if (!Array.isArray(campos)) return [];
+    return campos.map((campo, index) => ({
+      id: campo.id || crypto.randomUUID(),
+      tipo: campo.tipo,
+      etiqueta: campo.etiqueta || '',
+      placeholder: campo.placeholder ?? '',
+      requerido: !!campo.requerido,
+      opciones: Array.isArray(campo.opciones) ? [...campo.opciones] : undefined,
+      orden: campo.orden ?? index,
+    }));
   }
 
   private cargarDesde(f: Formulario | null): void {
@@ -56,12 +75,12 @@ export class FormularioBuilderComponent {
       this.editandoId = f.id;
       this.formNombre = f.nombre;
       this.formDescripcion = f.descripcion || '';
-      this.camposForm.set(JSON.parse(JSON.stringify(f.campos || [])));
+      this.camposForm.set(this.normalizarCamposEntrada(f.campos));
     } else if (f) {
       this.editandoId = null;
       this.formNombre = f.nombre || '';
       this.formDescripcion = f.descripcion || '';
-      this.camposForm.set(JSON.parse(JSON.stringify(f.campos || [])));
+      this.camposForm.set(this.normalizarCamposEntrada(f.campos));
     } else {
       this.editandoId = null;
       this.formNombre = '';
@@ -76,15 +95,14 @@ export class FormularioBuilderComponent {
   }
 
   agregarCampo(tipo: TipoCampo): void {
-    const defaults: Record<TipoCampo, Partial<CampoFormulario>> = {
-      texto: { etiqueta: 'Texto', placeholder: '' },
-      texto_largo: { etiqueta: 'Párrafo', placeholder: '' },
-      numero: { etiqueta: 'Número', placeholder: '0' },
-      fecha: { etiqueta: 'Fecha', placeholder: '' },
-      email: { etiqueta: 'Correo electrónico', placeholder: 'correo@ejemplo.com' },
-      lista: { etiqueta: 'Lista', placeholder: '', opciones: ['Opción 1', 'Opción 2'] },
-      checkbox: { etiqueta: 'Acepto los términos', placeholder: '' },
-      radio: { etiqueta: 'Opciones', placeholder: '', opciones: ['Opción 1', 'Opción 2'] },
+    const defaults: Partial<Record<TipoCampo, Partial<CampoFormulario>>> = {
+      texto: { etiqueta: 'Pregunta de texto corto', placeholder: 'Escribe tu respuesta...' },
+      texto_largo: { etiqueta: 'Descripción o texto largo', placeholder: 'Escribe una descripción detallada...' },
+      numero: { etiqueta: 'Pregunta numérica', placeholder: '0' },
+      fecha: { etiqueta: 'Pregunta de fecha', placeholder: '' },
+      lista: { etiqueta: 'Pregunta de selección de lista', placeholder: '', opciones: ['Opción 1', 'Opción 2'] },
+      checkbox: { etiqueta: 'Pregunta de selección múltiple (Checklist)', placeholder: '', opciones: ['Opción 1', 'Opción 2'] },
+      tabla: { etiqueta: 'Tabla de datos', placeholder: '', opciones: ['Columna 1', 'Columna 2'] },
       boton: { etiqueta: 'Enviar', placeholder: 'primario', requerido: false },
     };
 
@@ -128,6 +146,16 @@ export class FormularioBuilderComponent {
 
   parsearOpciones(campo: CampoFormulario, valor: string): void {
     campo.opciones = valor.split(',').map(o => o.trim()).filter(o => !!o);
+    this.camposForm.update(campos => [...campos]);
+  }
+
+  placeholderPregunta(tipo: TipoCampo): string {
+    if (tipo === 'boton') return 'Texto del botón';
+    return 'Escribe la pregunta para el funcionario...';
+  }
+
+  campoConOpciones(tipo: TipoCampo): boolean {
+    return tipo === 'lista' || tipo === 'checkbox' || tipo === 'tabla';
   }
 
   cancelar(): void {
@@ -138,7 +166,15 @@ export class FormularioBuilderComponent {
     if (!this.formNombre.trim()) return;
     this.guardando.set(true);
 
-    const camposConOrden = this.camposForm().map((c, i) => ({ ...c, orden: i }));
+    const camposConOrden = this.camposForm().map((c, i) => ({
+      id: c.id,
+      tipo: c.tipo,
+      etiqueta: (c.etiqueta || '').trim(),
+      placeholder: c.placeholder ?? '',
+      requerido: !!c.requerido,
+      opciones: c.opciones?.length ? [...c.opciones] : undefined,
+      orden: i,
+    }));
     const payload: Formulario = {
       nombre: this.formNombre.trim(),
       descripcion: this.formDescripcion.trim(),
@@ -152,7 +188,15 @@ export class FormularioBuilderComponent {
     op.subscribe({
       next: (form) => {
         this.guardando.set(false);
-        this.saved.emit(form);
+        if (camposConOrden.length > 0 && !form.campos?.length) {
+          console.error('El servidor no devolvió los campos guardados', { enviados: camposConOrden, respuesta: form });
+          alert('El formulario se guardó sin componentes. Reinicia el backend Spring y vuelve a intentar.');
+          return;
+        }
+        this.saved.emit({
+          ...form,
+          campos: this.normalizarCamposEntrada(form.campos ?? camposConOrden),
+        });
       },
       error: (err) => {
         this.guardando.set(false);
