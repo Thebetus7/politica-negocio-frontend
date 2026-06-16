@@ -10,17 +10,20 @@ Sigue esta configuración paso a paso en el asistente de creación de instancias
 3. **Tipo de instancia:** Selecciona `t2.micro` (o `t3.micro` según tu región) para mantenerte dentro del límite gratuito.
 4. **Par de claves (inicio de sesión):**
    * Haz clic en **"Crear un nuevo par de claves"** (si no tienes una).
-   * Llámalo `politica-negocio-key`.
+   * Llámalo `politica-negocio-front-key`.
    * Tipo de clave: **RSA**. Formato: **`.pem`**.
-   * Presiona **Crear**. En ese preciso momento, tu navegador descargará el archivo `politica-negocio-key.pem` a tu computadora. **¡Guárdalo bien!** Es el único momento donde AWS te lo dará.
+   * Presiona **Crear**. En ese preciso momento, tu navegador descargará el archivo `politica-negocio-front-key.pem` a tu computadora. **¡Guárdalo bien!** Es el único momento donde AWS te lo dará.
+   > **💡 Buena Práctica de Seguridad:** Observa que nombramos esta llave `politica-negocio-front-key`, distinta a la del backend (`politica-negocio-key`). En producción, la mejor práctica es generar llaves independientes para cada máquina. Así, si una llave se llegara a ver comprometida, tu otro servidor seguiría estando 100% seguro.
 5. **Configuraciones de red:**
    * Deja la red por defecto.
    * **Asignación automática de IP pública:** Asegúrate de que esté configurado en **"Habilitar"**.
    * **Firewall (grupos de seguridad):** Selecciona **"Crear un grupo de seguridad"**.
-   * Marca la casilla **"Permitir el tráfico de SSH desde"** y selecciona **"Cualquier lugar (0.0.0.0/0)"**.
-   * *(Importante para el Frontend)*: Marca también estas dos casillas de tráfico web:
-     * **Permitir el tráfico de HTTPS desde internet**
-     * **Permitir el tráfico de HTTP desde internet** (abre el puerto 80 por defecto).
+   * En la sección de **Reglas de grupos de seguridad de entrada**, verás que ya existe la "Regla del grupo de seguridad 1" configurada para **SSH** (puerto 22) desde "Cualquier lugar" (`0.0.0.0/0`). Déjala tal cual.
+   * *(Importante para el Frontend)*: Haz clic en el botón azul **"Agregar regla del grupo de seguridad"** (abajo a la izquierda) para crear una segunda regla y configúrala así:
+     * **Tipo:** HTTP
+     * **Tipo de origen:** Cualquier lugar
+     * **Origen:** `0.0.0.0/0`
+     *(Esto abrirá el puerto 80 para que el mundo pueda ver tu página web).*
 6. **Configurar almacenamiento:** Deja el disco en **`8 GiB` gp3** (configuración por defecto).
 7. **Detalles avanzados:**
    * **No toques absolutamente nada de esta sección.** Deja todos los selectores como vienen por defecto ("Seleccionar", "Ninguno", etc.).
@@ -29,7 +32,7 @@ Sigue esta configuración paso a paso en el asistente de creación de instancias
 
 ## 2. Conectarse al Servidor vía SSH (En tu PC Local - MINGW64 / Git Bash)
 
-> **Suposición:** Ya tienes la llave `politica-negocio-key.pem` guardada en tu carpeta `.ssh` y abriste **Git Bash directamente desde esa carpeta** (clic derecho en la carpeta `.ssh` → *Open Git Bash here*). Tu prompt ya muestra:
+> **Suposición:** Ya tienes la llave `politica-negocio-front-key.pem` guardada en tu carpeta `.ssh` y abriste **Git Bash directamente desde esa carpeta** (clic derecho en la carpeta `.ssh` → *Open Git Bash here*). Tu prompt ya muestra:
 > ```
 > USUARIO@BetoIlusion MINGW64 ~/.ssh
 > $
@@ -37,11 +40,11 @@ Sigue esta configuración paso a paso en el asistente de creación de instancias
 
 1. Protege los permisos de la llave (solo lectura — solo la primera vez):
    ```bash
-   chmod 400 politica-negocio-key.pem
+   chmod 400 politica-negocio-front-key.pem
    ```
 2. Conéctate al servidor (reemplaza `IP_AWS` por la IP pública de tu EC2):
    ```bash
-   ssh -i politica-negocio-key.pem ec2-user@IP_AWS
+   ssh -i politica-negocio-front-key.pem ec2-user@IP_AWS
    ```
 3. La primera vez te preguntará:
    > *Are you sure you want to continue connecting (yes/no)?*
@@ -88,15 +91,29 @@ EXPOSE 80
 CMD ["nginx", "-g", "daemon off;"]
 ```
 
-## 4. Subir el código a AWS (Terminal Local - PowerShell / Git Bash)
+## 4. Configurar la URL del Backend (En tu PC Local - Editor de Código)
+Antes de subir tu código, **es obligatorio** decirle a Angular dónde está el backend en la nube. En tu proyecto no usas `environment.ts`, la configuración está en `api-config.ts`. 
+
+1. Abre en tu editor de código el archivo `src/app/core/services/api-config.ts`.
+2. Cambia la IP local por tu **IP pública de AWS** (asegúrate de mantener `:8081`).
+
+Ejemplo de cómo debe quedar:
+```typescript
+// En src/app/core/services/api-config.ts
+export const BASE_URL = 'http://TU_IP_PUBLICA_AWS:8081'; // Reemplaza por tu IP real
+export const API_URL = `${BASE_URL}/api`;
+```
+Asegúrate de guardar los cambios en ese archivo.
+
+## 5. Subir el código a AWS (Terminal Local - PowerShell / Git Bash)
 A diferencia de Vanilla, aquí subimos el **código fuente crudo** (sin compilar), para que Docker lo compile en la nube.
 ```bash
 # Se ejecuta en tu PC Local
 # Copiamos la carpeta frontend al servidor usando el usuario ec2-user y apuntando a tu llave en ~/.ssh/
-scp -i ~/.ssh/politica-negocio-key.pem -r "ruta/a/tu/politica-negocio-frontend" ec2-user@IP_AWS:/home/ec2-user/
+scp -i ~/.ssh/politica-negocio-front-key.pem -r "ruta/a/tu/politica-negocio-frontend" ec2-user@IP_AWS:/home/ec2-user/
 ```
 
-## 5. Desplegar con Docker (En el Servidor AWS - Linux Amazon Linux 2023)
+## 6. Desplegar con Docker (En el Servidor AWS - Linux Amazon Linux 2023)
 Vuelve a tu conexión SSH en AWS, entra a la carpeta que subiste y ejecuta la magia:
 
 ```bash
@@ -119,9 +136,9 @@ Para actualizar tu frontend empaquetado en Docker al modificar archivos locales,
 
 1. **Subir tu código fuente modificado al servidor (En tu PC Local):**
    * *Si usas Git:* `git push` local y `git pull` en tu servidor de AWS.
-   * *Si usas SCP:* Vuelve a subir los archivos (excluyendo la carpeta `node_modules`):
+   * *Si usas SCP:* Vuelve a subir los archivos (excluyendo la carpeta `node_modules`). *(Recuerda usar la llave específica del frontend `politica-negocio-front-key.pem`)*:
      ```bash
-     scp -i ~/.ssh/politica-negocio-key.pem -r "ruta/a/tu/politica-negocio-frontend" ec2-user@IP_AWS:/home/ec2-user/
+     scp -i ~/.ssh/politica-negocio-front-key.pem -r "ruta/a/tu/politica-negocio-frontend" ec2-user@IP_AWS:/home/ec2-user/
      ```
 2. **Re-compilar y lanzar en el servidor (En el Servidor AWS - Linux Amazon Linux 2023):**
    Entra por SSH a tu servidor, navega a la carpeta de tu frontend y corre:
@@ -171,7 +188,7 @@ Apagar el servidor completo detiene los cargos de computación de la EC2 (solo s
 2. **IMPORTANTE:** Cuando apagas y enciendes una EC2, **su IP pública cambia**. Si tus clientes entran a ver la web, ahora deberán entrar usando la **nueva IP pública**.
 3. Conéctate por SSH usando la nueva IP desde Git Bash en la carpeta `.ssh`:
    ```bash
-   ssh -i politica-negocio-key.pem ec2-user@NUEVA_IP_AWS
+   ssh -i politica-negocio-front-key.pem ec2-user@NUEVA_IP_AWS
    ```
 4. Levanta el contenedor de Docker (este se guarda en memoria local, solo debemos encenderlo):
    ```bash
@@ -185,3 +202,28 @@ Si no apagaste el servidor entero, la IP sigue siendo la misma:
    ```bash
    docker start mi-frontend
    ```
+
+---
+
+## ⚠️ Solución de Problemas Comunes (Troubleshooting)
+
+### 1. Error: `Warning: Identity file ... not accessible` o `Permission denied (publickey)` al usar `scp`
+* **Causa:** Estás ejecutando el comando `scp` **dentro del servidor AWS** (el prompt de tu consola muestra `[ec2-user@ip-... ~]$`). El comando `scp` sirve para transferir archivos *desde* tu computadora local *hacia* el servidor de AWS.
+* **Solución:** Cierra la sesión de AWS (escribe `exit`) o abre una nueva pestaña/terminal en tu computadora local. Ejecuta el comando `scp` en la terminal de tu máquina local (donde tienes guardada la llave `.pem` y los archivos fuente de tu proyecto).
+
+### 2. Error al iniciar sesión o registrarse: `Http failure response ... 0 Unknown Error`
+* **Causa:** El navegador web bloquea las peticiones debido a políticas de **CORS** (Cross-Origin Resource Sharing). El backend está configurado para aceptar peticiones solo desde `localhost:4200` y rechaza peticiones que provengan de la IP pública del frontend.
+* **Solución:**
+  1. En el backend, abre el archivo [SecurityConfig.java](file:///c:/EDBERTO/ULT%20SEMESTRE/SW1/1ER%20parcial/SW1_PN_1_2026/politica-negocio/src/main/java/com/example/politica_negocio/config/security/SecurityConfig.java).
+  2. Modifica el método de configuración de CORS (`setAllowedOriginPatterns`) para incluir `"*"` o la IP pública del frontend:
+     ```java
+     configuration.setAllowedOriginPatterns(java.util.List.of(
+             "http://localhost:4201",
+             "http://localhost:4200",
+             "http://127.0.0.1:4201",
+             "http://127.0.0.1:4200",
+             "*" // Agrega esto para permitir todas las IPs en un entorno de desarrollo/pruebas
+     ));
+     ```
+  3. Compila el backend de nuevo y reinícialo en el servidor AWS. Si usas Docker en el backend, reconstruye la imagen (`docker build ...`) y reinicia el contenedor.
+
