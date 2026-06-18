@@ -8,6 +8,18 @@ import {
 
 type TipoCampo = CampoFormulario['tipo'];
 
+function generarUUID(): string {
+  if (typeof crypto !== 'undefined' && typeof crypto.randomUUID === 'function') {
+    return crypto.randomUUID();
+  }
+  // Fallback para entornos no seguros (HTTP)
+  return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, (c) => {
+    const r = (Math.random() * 16) | 0;
+    const v = c === 'x' ? r : (r & 0x3) | 0x8;
+    return v.toString(16);
+  });
+}
+
 @Component({
   selector: 'app-formulario-builder',
   standalone: true,
@@ -60,7 +72,7 @@ export class FormularioBuilderComponent {
   private normalizarCamposEntrada(campos: CampoFormulario[] | undefined | null): CampoFormulario[] {
     if (!Array.isArray(campos)) return [];
     return campos.map((campo, index) => ({
-      id: campo.id || crypto.randomUUID(),
+      id: campo.id || generarUUID(),
       tipo: campo.tipo,
       etiqueta: campo.etiqueta || '',
       placeholder: campo.placeholder ?? '',
@@ -108,7 +120,7 @@ export class FormularioBuilderComponent {
 
     const base = defaults[tipo] ?? { etiqueta: this.getTipoLabel(tipo) };
     const nuevo: CampoFormulario = {
-      id: crypto.randomUUID(),
+      id: generarUUID(),
       tipo,
       etiqueta: base.etiqueta ?? this.getTipoLabel(tipo),
       placeholder: base.placeholder ?? '',

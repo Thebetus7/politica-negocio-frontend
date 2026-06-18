@@ -8,6 +8,7 @@ import { TareaService, TareaFuncionario, CompletarActividadPayload } from '../..
 import { FormularioService, Formulario } from '../../../../core/services/formulario.service';
 import { DocumentoService } from '../../../../core/services/documento.service';
 import { VozService } from '../../../../core/services/voz.service';
+import { FormularioBuilderComponent } from '../../../formularios/components/formulario-builder/formulario-builder.component';
 
 interface ArchivoEstado {
   nombre?: string;
@@ -18,7 +19,7 @@ interface ArchivoEstado {
 @Component({
   selector: 'app-tarea-list',
   standalone: true,
-  imports: [CommonModule, FormsModule],
+  imports: [CommonModule, FormsModule, FormularioBuilderComponent],
   template: `
     <div class="max-w-5xl mx-auto p-6">
       <h1 class="text-2xl font-bold text-gray-900 dark:text-gray-100 mb-2">Mis Tareas Pendientes</h1>
@@ -56,7 +57,15 @@ interface ArchivoEstado {
       @if (tareaActiva()) {
         <div class="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
           <div class="bg-white dark:bg-gray-800 rounded-xl max-w-lg w-full max-h-[90vh] overflow-y-auto p-6 shadow-xl">
-            <h2 class="text-xl font-bold mb-4 dark:text-gray-100">{{ tareaActiva()!.actividadNombre }}</h2>
+            <div class="flex justify-between items-center mb-4 gap-4">
+              <h2 class="text-xl font-bold dark:text-gray-100">{{ tareaActiva()!.actividadNombre }}</h2>
+              @if (formulario()) {
+                <button type="button" (click)="abrirBuilderParaEdicion()"
+                  class="inline-flex items-center gap-1.5 px-2.5 py-1 bg-indigo-50 dark:bg-indigo-950/40 text-indigo-650 dark:text-indigo-400 hover:bg-indigo-100 dark:hover:bg-indigo-900/50 rounded-lg text-xs font-semibold border border-indigo-200 dark:border-indigo-800 transition-colors">
+                  ⚙️ Editar Formulario
+                </button>
+              }
+            </div>
 
             @if (cargandoFormulario()) {
               <p class="text-sm text-gray-500 dark:text-gray-400 mb-6">Cargando formulario...</p>
@@ -243,6 +252,24 @@ interface ArchivoEstado {
           </div>
         </div>
       }
+
+      @if (builderAbierto()) {
+        <div class="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-[60] p-4">
+          <div class="bg-white dark:bg-gray-800 rounded-xl w-full max-w-5xl h-[90vh] overflow-hidden flex flex-col p-6 shadow-2xl border border-gray-200 dark:border-gray-700">
+            <div class="flex justify-between items-center border-b border-gray-200 dark:border-gray-700 pb-3 mb-4">
+              <h3 class="text-lg font-bold text-gray-900 dark:text-gray-100">Editar Componentes del Formulario</h3>
+              <button (click)="builderAbierto.set(false)" class="text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200 text-lg">✕</button>
+            </div>
+            <div class="flex-1 min-h-0 overflow-y-auto">
+              <app-formulario-builder
+                [formularioInicial]="builderInicial()"
+                (saved)="onBuilderSaved($event)"
+                (cancelled)="builderAbierto.set(false)"
+              />
+            </div>
+          </div>
+        </div>
+      }
     </div>
   `
 })
@@ -263,6 +290,8 @@ export class TareaListComponent implements OnInit, OnDestroy {
   cargandoFormulario = signal(false);
   submitting = signal(false);
   submitError = signal('');
+  builderAbierto = signal(false);
+  builderInicial = signal<Formulario | null>(null);
   grabando = signal(false);
   procesandoVoz = signal(false);
   segundosGrabacion = signal(0);
@@ -419,6 +448,19 @@ export class TareaListComponent implements OnInit, OnDestroy {
     this.tareaActiva.set(null);
     this.formulario.set(null);
     this.cargandoFormulario.set(false);
+  }
+
+  abrirBuilderParaEdicion() {
+    const form = this.formulario();
+    if (!form) return;
+    this.builderInicial.set(form);
+    this.builderAbierto.set(true);
+  }
+
+  onBuilderSaved(nuevoForm: Formulario) {
+    this.formulario.set(nuevoForm);
+    this.inicializarValoresFormulario(nuevoForm);
+    this.builderAbierto.set(false);
   }
 
   docUrl(campoId: string): string {
