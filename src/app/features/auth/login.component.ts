@@ -21,6 +21,23 @@ import { AuthService } from '../../core/services/auth.service';
             Ingresa tus credenciales para acceder
           </p>
         </div>
+
+        <!-- Acceso Demo Rápido -->
+        <div class="bg-indigo-50 dark:bg-indigo-950/40 border border-indigo-100 dark:border-indigo-900/50 p-4 rounded-xl flex flex-col gap-2">
+          <span class="text-xs font-bold text-indigo-800 dark:text-indigo-300 uppercase tracking-wider text-center">Acceso Rápido Demo</span>
+          <div class="grid grid-cols-2 gap-3">
+            <button type="button" (click)="llenarAdmin()" 
+              class="flex items-center justify-center gap-2 py-2.5 px-3 bg-white dark:bg-gray-800 text-xs font-bold text-gray-700 dark:text-gray-200 border border-gray-200 dark:border-gray-700 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 transition-all hover:scale-[1.02] shadow-sm">
+              <span class="w-2.5 h-2.5 rounded-full bg-indigo-600"></span>
+              Admin
+            </button>
+            <button type="button" (click)="llenarFuncionario()" 
+              class="flex items-center justify-center gap-2 py-2.5 px-3 bg-white dark:bg-gray-800 text-xs font-bold text-gray-700 dark:text-gray-200 border border-gray-200 dark:border-gray-700 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 transition-all hover:scale-[1.02] shadow-sm">
+              <span class="w-2.5 h-2.5 rounded-full bg-emerald-600"></span>
+              Funcionario
+            </button>
+          </div>
+        </div>
         
         <form class="mt-8 space-y-6" (ngSubmit)="onSubmit()">
           @if (errorMsg()) {
@@ -62,12 +79,8 @@ import { AuthService } from '../../core/services/auth.service';
               </label>
             </div>
 
-            <div class="text-sm flex gap-2">
-              <button type="button" (click)="llenarCredenciales()" class="font-medium text-amber-600 hover:text-amber-500 transition-colors">
-                Llenar Admin
-              </button>
-              <span class="text-gray-300 dark:text-gray-600">|</span>
-              <a class="font-medium text-indigo-600 hover:text-indigo-500 transition-colors">
+            <div class="text-sm">
+              <a class="font-medium text-indigo-600 hover:text-indigo-500 transition-colors cursor-pointer">
                 ¿Olvidaste tu contraseña?
               </a>
             </div>
@@ -108,9 +121,14 @@ export class LoginComponent {
   private authService = inject(AuthService);
   private router = inject(Router);
 
-  llenarCredenciales() {
+  llenarAdmin() {
     this.correo = 'admin@example.com';
     this.password = 'admin123';
+  }
+
+  llenarFuncionario() {
+    this.correo = 'fun1@mail.com';
+    this.password = '123456789';
   }
 
   onSubmit() {
@@ -119,7 +137,14 @@ export class LoginComponent {
 
     this.authService.login({ correo: this.correo, password: this.password }).subscribe({
       next: () => {
-        this.router.navigate(['/dashboard']);
+        const user = this.authService.currentUser();
+        if (user?.rol === 'ADMINISTRADOR' || user?.rol === 'ROLE_ADMINISTRADOR') {
+          this.router.navigate(['/politicas']);
+        } else if (user?.rol === 'FUNCIONARIO' || user?.rol === 'ROLE_FUNCIONARIO') {
+          this.router.navigate(['/tareas']);
+        } else {
+          this.router.navigate(['/dashboard']);
+        }
       },
       error: (err) => {
         this.errorMsg.set(this.authService.getLoginErrorMessage(err));

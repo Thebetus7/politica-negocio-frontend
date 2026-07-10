@@ -105,7 +105,14 @@ export class RegisterComponent {
       password: this.password 
     }).subscribe({
       next: () => {
-        this.router.navigate(['/dashboard']);
+        const user = this.authService.currentUser();
+        if (user?.rol === 'ADMINISTRADOR' || user?.rol === 'ROLE_ADMINISTRADOR') {
+          this.router.navigate(['/politicas']);
+        } else if (user?.rol === 'FUNCIONARIO' || user?.rol === 'ROLE_FUNCIONARIO') {
+          this.router.navigate(['/tareas']);
+        } else {
+          this.router.navigate(['/dashboard']);
+        }
       },
       error: (err) => {
         this.errorMsg.set(err.message || 'Error al registrarse');

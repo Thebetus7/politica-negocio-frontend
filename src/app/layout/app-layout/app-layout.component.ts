@@ -26,11 +26,6 @@ import { AuthService } from '../../core/services/auth.service';
 
               <!-- Navigation Links -->
               <div class="hidden space-x-8 sm:-my-px sm:ms-10 sm:flex">
-                <a routerLink="/dashboard" routerLinkActive="border-indigo-500 text-indigo-600 dark:text-indigo-400" 
-                   [routerLinkActiveOptions]="{exact: true}"
-                   class="inline-flex items-center px-1 pt-1 border-b-2 border-transparent text-sm font-semibold leading-5 text-gray-500 hover:text-gray-700 hover:border-gray-300 focus:outline-none transition-all duration-200">
-                  Dashboard
-                </a>
                 
                 @if (authService.isAdmin()) {
                   <a routerLink="/departamentos" routerLinkActive="border-indigo-500 text-indigo-600 dark:text-indigo-400"
@@ -121,7 +116,6 @@ import { AuthService } from '../../core/services/auth.service';
         <!-- Mobile Navigation Menu -->
         <div [class.hidden]="!mobileMenuOpen()" class="sm:hidden border-b border-gray-200 dark:border-gray-700 animate-fade-in-down">
           <div class="pt-2 pb-3 space-y-1">
-            <a routerLink="/dashboard" routerLinkActive="bg-indigo-50 border-indigo-500 text-indigo-700 dark:bg-gray-800 dark:text-white" class="block ps-3 pe-4 py-2 border-l-4 text-base font-medium transition">Dashboard</a>
             
             @if (authService.isAdmin()) {
               <a routerLink="/departamentos" routerLinkActive="bg-indigo-50 border-indigo-500 text-indigo-700 dark:bg-gray-800 dark:text-white" class="block ps-3 pe-4 py-2 border-l-4 border-transparent text-base font-medium text-gray-600 hover:bg-gray-50 hover:border-gray-300 transition">Departamentos</a>

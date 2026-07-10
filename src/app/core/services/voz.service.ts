@@ -1,6 +1,5 @@
-import { Injectable, inject } from '@angular/core';
-import { HttpClient } from '@angular/common/http';
-import { Observable } from 'rxjs';
+import { Injectable } from '@angular/core';
+import { Observable, throwError } from 'rxjs';
 
 export interface VozFillResponse {
   transcripcion?: string;
@@ -8,16 +7,16 @@ export interface VozFillResponse {
   razon?: string;
 }
 
-import { API_URL } from './api-config';
-
+/**
+ * @deprecated Este servicio ha sido reemplazado por WhisperService y VoiceFormMapperService
+ * para realizar la transcripción y el mapeo de voz 100% de forma local en el navegador.
+ */
 @Injectable({ providedIn: 'root' })
 export class VozService {
-  private http = inject(HttpClient);
-  private apiUrl = `${API_URL}/voz`;
+  constructor() {}
 
   llenarFormulario(formularioId: string, audioBlob: Blob, filename = 'audio.webm'): Observable<VozFillResponse> {
-    const formData = new FormData();
-    formData.append('audio', audioBlob, filename);
-    return this.http.post<VozFillResponse>(`${this.apiUrl}/llenar-formulario/${formularioId}`, formData);
+    console.warn('[VozService] Este método está obsoleto. Utilice WhisperService local en su lugar.');
+    return throwError(() => new Error('Este servicio está obsoleto. Use WhisperService local.'));
   }
 }

@@ -8,6 +8,9 @@ import { TareaService, TareaFuncionario, CompletarActividadPayload } from '../..
 import { FormularioService, Formulario } from '../../../../core/services/formulario.service';
 import { DocumentoService } from '../../../../core/services/documento.service';
 import { VozService } from '../../../../core/services/voz.service';
+import { WhisperService } from '../../../../core/services/whisper.service';
+import { VoiceFormMapperService } from '../../../../core/services/voice-form-mapper.service';
+import { GeminiVozService } from '../../../../core/services/gemini-voz.service';
 import { FormularioBuilderComponent } from '../../../formularios/components/formulario-builder/formulario-builder.component';
 
 interface ArchivoEstado {
@@ -71,18 +74,40 @@ interface ArchivoEstado {
               <p class="text-sm text-gray-500 dark:text-gray-400 mb-6">Cargando formulario...</p>
             } @else if (formulario()) {
               <div class="mb-4 p-3 rounded-lg bg-indigo-50 dark:bg-indigo-900/30 border border-indigo-200 dark:border-indigo-800">
-                <p class="text-sm text-indigo-800 dark:text-indigo-200 mb-2">Llenar con voz (un solo audio)</p>
-                @if (grabando()) {
-                  <button type="button" (click)="detenerGrabacion()"
-                    class="px-3 py-1.5 bg-red-600 text-white rounded-lg text-sm">Detener ({{ segundosGrabacion() }}s)</button>
-                } @else {
-                  <button type="button" (click)="iniciarGrabacion()" [disabled]="procesandoVoz()"
-                    class="px-3 py-1.5 bg-indigo-600 text-white rounded-lg text-sm disabled:opacity-50">
-                    {{ procesandoVoz() ? 'Procesando...' : 'Grabar audio' }}
-                  </button>
+                <p class="text-sm text-indigo-800 dark:text-indigo-200 mb-2 font-medium">Llenar con voz (un solo audio)</p>
+                
+                @if (modeloCargando()) {
+                  <div class="space-y-2 mb-3 bg-white dark:bg-gray-800 p-2.5 rounded-lg border border-indigo-150 dark:border-indigo-950">
+                    <p class="text-xs text-indigo-600 dark:text-indigo-400 font-semibold animate-pulse">
+                      Descargando modelo de voz local... {{ progresoDescarga() }}%
+                    </p>
+                    <div class="w-full bg-gray-200 dark:bg-gray-700 h-2 rounded-full overflow-hidden">
+                      <div class="bg-indigo-600 h-full transition-all duration-300" [style.width.%]="progresoDescarga()"></div>
+                    </div>
+                  </div>
                 }
+
+                <div class="flex gap-2">
+                  @if (grabando()) {
+                    <button type="button" (click)="detenerGrabacion()"
+                      class="px-3 py-1.5 bg-red-650 text-white rounded-lg text-sm hover:bg-red-700 transition-colors">
+                      Detener ({{ segundosGrabacion() }}s)
+                    </button>
+                  } @else {
+                    <button type="button" (click)="iniciarGrabacionModo('local')" [disabled]="procesandoVoz() || procesandoVozApi() || modeloCargando()"
+                      class="px-3 py-1.5 bg-indigo-600 text-white rounded-lg text-sm disabled:opacity-50 hover:bg-indigo-700 transition-colors">
+                      {{ procesandoVoz() ? 'Procesando...' : 'Grabar audio' }}
+                    </button>
+
+                    <button type="button" (click)="iniciarGrabacionModo('api')" [disabled]="procesandoVoz() || procesandoVozApi() || modeloCargando()"
+                      class="px-3 py-1.5 bg-purple-600 text-white rounded-lg text-sm disabled:opacity-50 hover:bg-purple-700 transition-colors">
+                      {{ procesandoVozApi() ? 'Procesando API...' : 'Grabar audio API' }}
+                    </button>
+                  }
+                </div>
+
                 @if (vozRazon()) {
-                  <p class="text-xs text-gray-600 dark:text-gray-400 mt-2">{{ vozRazon() }}</p>
+                  <p class="text-xs text-gray-600 dark:text-gray-400 mt-2 italic">{{ vozRazon() }}</p>
                 }
               </div>
 
@@ -280,6 +305,9 @@ export class TareaListComponent implements OnInit, OnDestroy {
   private portafolioSocket = inject(PortafolioSocketService);
   documentoService = inject(DocumentoService);
   private vozService = inject(VozService);
+  private whisperService = inject(WhisperService);
+  private voiceMapper = inject(VoiceFormMapperService);
+  private geminiVozService = inject(GeminiVozService);
   private socketSub?: Subscription;
 
   tareas = signal<TareaFuncionario[]>([]);
@@ -294,8 +322,14 @@ export class TareaListComponent implements OnInit, OnDestroy {
   builderInicial = signal<Formulario | null>(null);
   grabando = signal(false);
   procesandoVoz = signal(false);
+  procesandoVozApi = signal(false);
+  modoGrabacion = signal<'local' | 'api' | null>(null);
   segundosGrabacion = signal(0);
   vozRazon = signal('');
+
+  modeloCargando = this.whisperService.modeloCargando;
+  progresoDescarga = this.whisperService.progresoDescarga;
+  modeloListo = this.whisperService.modeloListo;
 
   valores: Record<string, unknown> = {};
   observaciones = '';
@@ -489,12 +523,13 @@ export class TareaListComponent implements OnInit, OnDestroy {
     });
   }
 
-  async iniciarGrabacion() {
+  async iniciarGrabacionModo(modo: 'local' | 'api') {
     const form = this.formulario();
     if (!form?.id) return;
     try {
       const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
       this.audioChunks = [];
+      this.modoGrabacion.set(modo);
       this.mediaRecorder = new MediaRecorder(stream);
       this.mediaRecorder.ondataavailable = (e) => {
         if (e.data.size > 0) this.audioChunks.push(e.data);
@@ -521,7 +556,7 @@ export class TareaListComponent implements OnInit, OnDestroy {
     this.grabando.set(false);
   }
 
-  private procesarAudioGrabado(formularioId: string) {
+  private async procesarAudioGrabado(formularioId: string) {
     if (this.audioChunks.length === 0) {
       console.warn('[Voz] No hay chunks de audio para procesar');
       return;
@@ -529,45 +564,118 @@ export class TareaListComponent implements OnInit, OnDestroy {
     const blob = new Blob(this.audioChunks, { type: 'audio/webm' });
     const audioUrl = this.logAudioEnConsola(blob, formularioId);
 
-    this.procesandoVoz.set(true);
-    console.log('[Voz] Enviando audio a Spring → FastAPI...', {
-      formularioId,
-      endpoint: `http://localhost:8081/api/voz/llenar-formulario/${formularioId}`,
-    });
+    const modo = this.modoGrabacion();
+    const campos = this.formulario()?.campos || [];
 
-    this.vozService.llenarFormulario(formularioId, blob).subscribe({
-      next: (res) => {
-        console.group('[Voz] Respuesta API (Spring / FastAPI / Gemini)');
-        console.log('Texto escuchado (transcripción):', res.transcripcion || '(sin transcripción en respuesta)');
-        console.log('Valores extraídos para el formulario:', res.valores);
-        console.log('Razón / resumen:', res.razon);
-        console.log('Respuesta completa:', res);
-        console.groupEnd();
+    if (modo === 'api') {
+      this.procesandoVozApi.set(true);
+      this.vozRazon.set('Procesando audio estructurado con Gemini API...');
 
-        const vals = res.valores || {};
-        for (const [k, v] of Object.entries(vals)) {
-          this.valores[k] = v;
+      this.geminiVozService.llenarFormularioConGemini(blob, campos).subscribe({
+        next: (valoresMapeados) => {
+          console.group('[Voz API Gemini] Resultados');
+          console.log('Valores Estructurados:', valoresMapeados);
+          console.groupEnd();
+
+          // Asignar los valores estructurados
+          for (const [k, v] of Object.entries(valoresMapeados)) {
+            const campo = campos.find(c => c.id === k);
+            if (!campo) continue;
+
+            if (campo.tipo === 'checkbox' && campo.opciones?.length) {
+              const actual = this.valores[k] as Record<string, boolean> || {};
+              const nuevosChecks = v as Record<string, boolean>;
+              this.valores[k] = { ...actual, ...nuevosChecks };
+            } else if (campo.tipo === 'tabla') {
+              const filasNuevas = v as Array<Record<string, string>>;
+              if (filasNuevas && filasNuevas.length > 0) {
+                const filasActuales = this.getTablaFilas(k);
+                const primeraFilaVacia = filasActuales.length === 1 && 
+                  Object.values(filasActuales[0]).every(val => val === '');
+
+                if (primeraFilaVacia) {
+                  this.valores[k] = [...filasNuevas];
+                } else {
+                  this.valores[k] = [...filasActuales, ...filasNuevas];
+                }
+              }
+            } else {
+              this.valores[k] = v;
+            }
+          }
+
+          this.vozRazon.set('Formulario prellenado con éxito mediante Gemini API.');
+          this.procesandoVozApi.set(false);
+        },
+        error: (err) => {
+          console.group('[Voz API Gemini] Error Detallado');
+          console.error('Status:', err.status);
+          console.error('Mensaje de error:', err.message);
+          console.error('Cuerpo del error:', err.error);
+          console.error('Objeto HttpErrorResponse completo:', err);
+          console.groupEnd();
+          const detailMsg = err.error?.error?.message || err.message || 'Error al procesar audio con Gemini API';
+          this.submitError.set(detailMsg);
+          this.vozRazon.set(`Error: ${detailMsg}`);
+          this.procesandoVozApi.set(false);
         }
-        const resumen = res.transcripcion
-          ? `Escuché: "${res.transcripcion}"`
-          : (res.razon || 'Formulario prellenado desde audio');
-        this.vozRazon.set(resumen);
-        this.procesandoVoz.set(false);
-      },
-      error: (err) => {
-        console.group('[Voz] Error al procesar audio');
-        console.error('Status:', err.status);
-        console.error('Mensaje:', err.error?.message || err.message);
-        console.error('Cuerpo completo:', err.error);
-        console.error('Audio enviado (reproducir):', audioUrl);
+      });
+    } else {
+      // Flujo local con Whisper
+      this.procesandoVoz.set(true);
+      this.vozRazon.set('Transcribiendo audio localmente...');
+
+      try {
+        const transcripcion = await this.whisperService.transcribir(blob);
+
+        if (!transcripcion) {
+          this.vozRazon.set('No se detectó voz en el audio.');
+          this.procesandoVoz.set(false);
+          return;
+        }
+
+        const valoresMapeados = this.voiceMapper.mapear(transcripcion, campos);
+
+        console.group('[Voz Local] Resultados del procesamiento');
+        console.log('Transcripción:', transcripcion);
+        console.log('Valores Mapeados:', valoresMapeados);
         console.groupEnd();
-        const msg = err.status === 401
-          ? 'Sesión expirada o no autenticado. Vuelve a iniciar sesión.'
-          : (err.error?.message || 'No se pudo procesar el audio');
-        this.submitError.set(msg);
+
+        for (const [k, v] of Object.entries(valoresMapeados)) {
+          const campo = campos.find(c => c.id === k);
+          if (!campo) continue;
+
+          if (campo.tipo === 'checkbox' && campo.opciones?.length) {
+            const actual = this.valores[k] as Record<string, boolean> || {};
+            const nuevosChecks = v as Record<string, boolean>;
+            this.valores[k] = { ...actual, ...nuevosChecks };
+          } else if (campo.tipo === 'tabla') {
+            const filasNuevas = v as Array<Record<string, string>>;
+            if (filasNuevas && filasNuevas.length > 0) {
+              const filasActuales = this.getTablaFilas(k);
+              const primeraFilaVacia = filasActuales.length === 1 && 
+                Object.values(filasActuales[0]).every(val => val === '');
+
+              if (primeraFilaVacia) {
+                this.valores[k] = [...filasNuevas];
+              } else {
+                this.valores[k] = [...filasActuales, ...filasNuevas];
+              }
+            }
+          } else {
+            this.valores[k] = v;
+          }
+        }
+
+        this.vozRazon.set(`Escuché: "${transcripcion}"`);
+      } catch (err: any) {
+        console.error('[Voz Local] Error procesando audio:', err);
+        this.submitError.set(err.message || 'Error al transcribir el audio localmente');
+        this.vozRazon.set('Error en el procesamiento de voz.');
+      } finally {
         this.procesandoVoz.set(false);
       }
-    });
+    }
   }
 
   /** Logs de depuración: metadata del blob y URL reproducible en consola. */
