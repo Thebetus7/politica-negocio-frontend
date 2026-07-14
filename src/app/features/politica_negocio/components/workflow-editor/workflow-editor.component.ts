@@ -2,7 +2,7 @@ import { Component, OnInit, OnDestroy, AfterViewInit, ViewChild, ElementRef, Hos
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { ActivatedRoute, Router } from '@angular/router';
-import { Subscription } from 'rxjs';
+import { Subscription, firstValueFrom } from 'rxjs';
 
 import { ActividadService, Actividad } from '../../../../core/services/actividad.service';
 import { FlujoService, Flujo } from '../../../../core/services/flujo.service';
@@ -15,6 +15,9 @@ import { AuthService } from '../../../../core/services/auth.service';
 import { FormUpdateService } from '../../../../core/services/form-update.service';
 import { DiagramService } from '../../services/diagram.service';
 import { LogPoliticaService } from '../../../../core/services/log-politica.service';
+import { GeminiDiagramService, DiagramCommand } from '../../../../core/services/gemini-diagram.service';
+import { GroqDiagramService, GroqDiagramCommand } from '../../../../core/services/groq-diagram.service';
+import { PoliticaDocumentosListComponent } from '../politica-documentos-list/politica-documentos-list.component';
 
 // ──────── Interfaces internas ────────
 interface WorkflowNode {
@@ -73,7 +76,7 @@ interface RemoteCursor {
 @Component({
   selector: 'app-workflow-editor',
   standalone: true,
-  imports: [CommonModule, FormsModule, FormularioBuilderComponent],
+  imports: [CommonModule, FormsModule, FormularioBuilderComponent, PoliticaDocumentosListComponent],
   templateUrl: './workflow-editor.component.html',
   styleUrls: ['./workflow-editor.component.css']
 })
@@ -91,9 +94,16 @@ export class WorkflowEditorComponent implements OnInit, AfterViewInit, OnDestroy
   private formUpdateService = inject(FormUpdateService);
   private diagramService = inject(DiagramService);
   private logPoliticaService = inject(LogPoliticaService);
+  private geminiDiagramService = inject(GeminiDiagramService);
+  private groqDiagramService = inject(GroqDiagramService);
 
   @ViewChild('svgCanvas', { static: true }) svgCanvas!: ElementRef<SVGSVGElement>;
   @ViewChild('canvasWrapper') canvasWrapper!: ElementRef<HTMLDivElement>;
+
+  // Estado IA
+  promptIA = '';
+  procesandoIA = signal(false);
+  mensajeIA = signal('');
 
   // Estado
   politicaId = '';
@@ -239,12 +249,14 @@ export class WorkflowEditorComponent implements OnInit, AfterViewInit, OnDestroy
   }
 
   ngAfterViewInit(): void {
-    this.updateViewBoxSize();
-    this.resizeObserver = new ResizeObserver(() => this.updateViewBoxSize());
-    if (this.canvasWrapper?.nativeElement) {
-      this.resizeObserver.observe(this.canvasWrapper.nativeElement);
-    }
-    requestAnimationFrame(() => this.tryInitialLaneCentering());
+    setTimeout(() => {
+      this.updateViewBoxSize();
+      this.resizeObserver = new ResizeObserver(() => this.updateViewBoxSize());
+      if (this.canvasWrapper?.nativeElement) {
+        this.resizeObserver.observe(this.canvasWrapper.nativeElement);
+      }
+      this.tryInitialLaneCentering();
+    }, 0);
   }
 
   ngOnDestroy(): void {
@@ -1710,5 +1722,262 @@ export class WorkflowEditorComponent implements OnInit, AfterViewInit, OnDestroy
     const halfH = from.height / 2;
     const scale = 1 / Math.max(Math.abs(dx) / (halfW || 1), Math.abs(dy) / (halfH || 1));
     return { x: fx + dx * scale, y: fy + dy * scale };
+  }
+
+  async ejecutarPromptIA() {
+    if (!this.promptIA.trim() || this.procesandoIA()) return;
+
+    this.procesandoIA.set(true);
+    this.mensajeIA.set('Interpretando instrucción con IA...');
+
+    const contexto = {
+      nodos: this.nodes().map(n => ({
+        id: n.id,
+        tempId: n.tempId,
+        tipo: n.tipo,
+        nombre: n.nombre,
+        departamentoId: n.departamentoId
+      })),
+      links: this.links().map(l => ({
+        sourceId: l.sourceId,
+        targetId: l.targetId,
+        tipo: l.tipo
+      })),
+      departamentos: this.departamentos().map(d => ({
+        id: d.id,
+        nombre: d.nombre
+      }))
+    };
+
+    const nombresDeNodosCreadosMap = new Map<string, string>();
+
+    this.groqDiagramService.interpretarPrompt(this.promptIA, contexto).subscribe({
+      next: async (comandos) => {
+        console.log('[IA Diagrama] Comandos recibidos:', comandos);
+        if (!comandos || comandos.length === 0) {
+          this.mensajeIA.set('Groq no generó ningún cambio para esta instrucción.');
+          this.procesandoIA.set(false);
+          return;
+        }
+
+        const buscarNodo = (nombreBuscado: string) => {
+          const nombreL = nombreBuscado.trim().toLowerCase();
+          if (!nombreL) return undefined;
+
+          // 1. Intentar coincidencia exacta
+          let encontrado = this.nodes().find(n => n.nombre.toLowerCase() === nombreL);
+          if (encontrado) return encontrado;
+
+          // 2. Si es "fin" o "inicio", intentar match exacto por tipo de nodo
+          if (nombreL === 'fin' || nombreL === 'inicio') {
+            encontrado = this.nodes().find(n => n.tipo === nombreL);
+            if (encontrado) return encontrado;
+          }
+
+          // 3. Intentar coincidencia parcial
+          encontrado = this.nodes().find(n => n.nombre.toLowerCase().includes(nombreL));
+          return encontrado;
+        };
+
+        this.mensajeIA.set(`Ejecutando ${comandos.length} comandos...`);
+
+        try {
+          for (const cmd of comandos) {
+            if (cmd.accion === 'añadir_nodo') {
+              const tipo = this.normalizeTipoNodo(cmd.tipo || 'actividad');
+              const depId = cmd.departamentoId || this.departamentos()[0]?.id;
+              if (!depId) continue;
+
+              const nombre = cmd.nombre || this.getDefaultName(tipo);
+              const dims = this.nodeDimensions[tipo] || { w: 200, h: 100 };
+
+              const depas = this.departamentos();
+              const laneIndex = depas.findIndex(d => d.id === depId);
+              const laneIndexVal = laneIndex >= 0 ? laneIndex : 0;
+              const x = this.getLaneX(laneIndexVal) + this.getLaneWidth(laneIndexVal) / 2 - dims.w / 2;
+
+              const nodosEnCarril = this.nodes().filter(n => n.departamentoId === depId);
+              let y = this.laneHeaderHeight + 80;
+              if (nodosEnCarril.length > 0) {
+                const maxY = Math.max(...nodosEnCarril.map(n => n.y + n.height));
+                y = maxY + 80;
+              }
+
+              const tempId = 'temp_' + Date.now() + '_' + Math.random().toString(36).substr(2, 5);
+
+              const nuevoNodo: WorkflowNode = {
+                id: '',
+                tempId,
+                tipo,
+                nombre,
+                x,
+                y,
+                departamentoId: depId,
+                width: dims.w,
+                height: dims.h
+              };
+
+              if (tipo === 'pregunta') {
+                nuevoNodo.iterativoTipo = cmd.iterativoTipo || 'while_do';
+                nuevoNodo.condicion = cmd.condicion || nombre;
+              } else if (tipo === 'decision') {
+                nuevoNodo.condicion = cmd.condicion || nombre;
+              }
+
+              this.nodes.update(list => [...list, nuevoNodo]);
+
+              const actividad: Actividad = {
+                politicaId: this.politicaId,
+                departamentoId: depId,
+                nombre: nuevoNodo.nombre,
+                estado: this.buildEstadoForPersist(nuevoNodo),
+                ejeX: String(nuevoNodo.x),
+                ejeY: String(nuevoNodo.y),
+                tipoNodo: this.persistTipoNodo(tipo),
+                width: String(nuevoNodo.width),
+                height: String(nuevoNodo.height)
+              };
+
+              const saved = await firstValueFrom(this.actividadService.create(this.politicaId, actividad));
+              nuevoNodo.id = saved.id!;
+
+              this.nodes.update(list =>
+                list.map(n => n.tempId === tempId ? { ...n, id: saved.id! } : n)
+              );
+
+              nombresDeNodosCreadosMap.set(nombre.toLowerCase(), saved.id!);
+            } 
+            
+            else if (cmd.accion === 'conectar') {
+              const origenNombre = cmd.origenNombre?.toLowerCase() || '';
+              const destinoNombre = cmd.destinoNombre?.toLowerCase() || '';
+
+              let origen = buscarNodo(origenNombre);
+              let destino = buscarNodo(destinoNombre);
+
+              if (!origen) {
+                for (const [nombreCreado, idCreado] of nombresDeNodosCreadosMap.entries()) {
+                  if (nombreCreado.includes(origenNombre)) {
+                    origen = this.nodes().find(n => n.id === idCreado);
+                    break;
+                  }
+                }
+              }
+              if (!destino) {
+                for (const [nombreCreado, idCreado] of nombresDeNodosCreadosMap.entries()) {
+                  if (nombreCreado.includes(destinoNombre)) {
+                    destino = this.nodes().find(n => n.id === idCreado);
+                    break;
+                  }
+                }
+              }
+
+              if (!origen || !destino || !origen.id || !destino.id) {
+                console.warn(`[IA Diagrama] No se pudo conectar de "${cmd.origenNombre}" a "${cmd.destinoNombre}": Nodos no encontrados.`);
+                continue;
+              }
+
+              const validationError = this.validateConnection(origen, destino);
+              if (validationError) {
+                console.warn(`[IA Diagrama] Validación de conexión fallida: ${validationError}`);
+                continue;
+              }
+
+              const computedTipo = this.computeLinkTipo(origen);
+              const label = this.computeLinkLabel(origen, computedTipo);
+
+              const nuevoLink: WorkflowLink = {
+                id: '',
+                sourceId: origen.id,
+                targetId: destino.id,
+                tipo: computedTipo,
+                label
+              };
+
+              this.links.update(list => [...list, nuevoLink]);
+
+              const flujo: Flujo = {
+                politicaId: this.politicaId,
+                actividadId: origen.id,
+                proceso: {
+                  tipo: computedTipo,
+                  siguientes: [{ actividadDestinoId: destino.id, label: nuevoLink.label }],
+                  estadoActual: 'pendiente',
+                  orden: this.links().length
+                }
+              };
+
+              const savedLink = await firstValueFrom(this.flujoService.create(this.politicaId, flujo));
+              this.links.update(list =>
+                list.map(l => l === nuevoLink ? { ...l, id: savedLink.id! } : l)
+              );
+
+              this.persistPreguntaRetornoAfterConnection(origen, destino);
+            } 
+            
+            else if (cmd.accion === 'eliminar_nodo') {
+              const nombreNodo = cmd.nombre?.toLowerCase() || '';
+              if (!nombreNodo) continue;
+
+              const nodoAEliminar = buscarNodo(nombreNodo);
+              if (!nodoAEliminar) {
+                console.warn(`[IA Diagrama] No se encontró el nodo a eliminar: "${cmd.nombre}"`);
+                continue;
+              }
+
+              if (nodoAEliminar.id) {
+                await firstValueFrom(this.actividadService.softDelete(this.politicaId, nodoAEliminar.id));
+                this.nodes.update(list => list.filter(n => n.tempId !== nodoAEliminar.tempId));
+                this.links.update(list => list.filter(l => l.sourceId !== nodoAEliminar.id && l.targetId !== nodoAEliminar.id));
+              } else {
+                this.nodes.update(list => list.filter(n => n.tempId !== nodoAEliminar.tempId));
+              }
+            } 
+            
+            else if (cmd.accion === 'eliminar_conexion') {
+              const origenNombre = cmd.origenNombre?.toLowerCase() || '';
+              const destinoNombre = cmd.destinoNombre?.toLowerCase() || '';
+              if (!origenNombre || !destinoNombre) continue;
+
+              const origen = buscarNodo(origenNombre);
+              const destino = buscarNodo(destinoNombre);
+
+              if (!origen || !destino || !origen.id || !destino.id) {
+                console.warn(`[IA Diagrama] No se pudo encontrar origen "${cmd.origenNombre}" o destino "${cmd.destinoNombre}" para eliminar conexión.`);
+                continue;
+              }
+
+              const link = this.links().find(l => l.sourceId === origen.id && l.targetId === destino.id);
+              if (!link) {
+                console.warn(`[IA Diagrama] No existe una conexión entre "${origen.nombre}" y "${destino.nombre}".`);
+                continue;
+              }
+
+              if (link.id) {
+                await firstValueFrom(this.flujoService.softDelete(this.politicaId, link.id));
+                this.links.update(list => list.filter(l => l.id !== link.id));
+              } else {
+                this.links.update(list => list.filter(l => l !== link));
+              }
+            }
+          }
+
+          this.broadcastUpdate();
+          this.refreshFlujoEstado();
+
+          this.mensajeIA.set(`✅ Cambios (${comandos.length} comandos).`);
+          this.promptIA = '';
+        } catch (err: any) {
+          console.error('[IA Diagrama] Error ejecutando comandos:', err);
+          this.mensajeIA.set(`Error al aplicar cambios: ${err.message || err}`);
+        } finally {
+          this.procesandoIA.set(false);
+        }
+      },
+      error: (err) => {
+        this.mensajeIA.set(err.message || 'Error al comunicarse con Groq');
+        this.procesandoIA.set(false);
+      }
+    });
   }
 }

@@ -3,7 +3,7 @@ import { HttpClient } from '@angular/common/http';
 import { Observable, map } from 'rxjs';
 
 export interface DiagramCommand {
-  accion: 'añadir_nodo' | 'conectar';
+  accion: 'añadir_nodo' | 'conectar' | 'eliminar_nodo' | 'eliminar_conexion';
   tipo?: 'inicio' | 'actividad' | 'decision' | 'pregunta' | 'time_event' | 'fin';
   nombre?: string;
   departamentoId?: string;
@@ -81,7 +81,7 @@ export class GeminiDiagramService {
         properties: {
           accion: {
             type: 'STRING',
-            enum: ['añadir_nodo', 'conectar'],
+            enum: ['añadir_nodo', 'conectar', 'eliminar_nodo', 'eliminar_conexion'],
             description: 'Acción de modificación del diagrama a ejecutar'
           },
           tipo: {
@@ -164,7 +164,12 @@ export class GeminiDiagramService {
     3. **Comando de Conexión ('conectar')**:
        - Debe indicar 'origenNombre' y 'destinoNombre'.
        - Si el usuario dice "conecta X a fin", y 'fin' no existe, debes primero emitir un comando 'añadir_nodo' para el tipo 'fin', y luego un comando 'conectar' con destinoNombre: "Fin".
-       - Asegúrate de usar los nombres de los nodos de forma consistente en los comandos.\n\n`;
+       - Asegúrate de usar los nombres de los nodos de forma consistente en los comandos.
+    4. **Comando de Eliminación ('eliminar_nodo')**:
+       - Si el usuario pide explícitamente eliminar o remover un nodo o actividad (ej: "elimina la actividad nueva actividad y trabajo"), debes emitir un comando con accion: "eliminar_nodo" para cada uno, indicando en el campo 'nombre' el nombre exacto o aproximado del nodo de la lista de nodos existentes.
+       - Si el usuario dice "elimina la actividad X", emite { "accion": "eliminar_nodo", "nombre": "X" }.
+    5. **Comando de Eliminar Conexión ('eliminar_conexion')**:
+       - Si el usuario pide eliminar la conexión, enlace o flujo entre dos actividades (ej: "eliminar la conexion entre finalizacion y fin"), debes emitir un comando con accion: "eliminar_conexion" indicando 'origenNombre' (ej: "finalizacion") y 'destinoNombre' (ej: "fin").\n\n`;
 
     prompt += `### INSTRUCCIÓN DEL USUARIO A INTERPRETAR:\n`;
     prompt += `"${promptUsuario}"`;

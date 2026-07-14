@@ -8,6 +8,12 @@ export interface DocumentoUploadResponse {
   mimeType: string;
   size: number;
   downloadUrl: string;
+  estado?: string;
+  versionActual?: number;
+  contenidoTexto?: string;
+  politicaId?: string;
+  actividadId?: string;
+  portafolioId?: string;
 }
 
 import { API_URL } from './api-config';
@@ -30,5 +36,44 @@ export class DocumentoService {
 
   getDownloadUrl(id: string): string {
     return `${this.apiUrl}/${id}/download`;
+  }
+
+  listar(busqueda?: string, estado?: string, ordenFechaDesc = true): Observable<DocumentoUploadResponse[]> {
+    let params: any = { ordenFechaDesc: String(ordenFechaDesc) };
+    if (busqueda) params.busqueda = busqueda;
+    if (estado) params.estado = estado;
+    return this.http.get<DocumentoUploadResponse[]>(this.apiUrl, { params });
+  }
+
+  listarPorPolitica(politicaId: string): Observable<DocumentoUploadResponse[]> {
+    return this.http.get<DocumentoUploadResponse[]>(`${this.apiUrl}/politica/${politicaId}`);
+  }
+
+  getById(id: string): Observable<DocumentoUploadResponse> {
+    return this.http.get<DocumentoUploadResponse>(`${this.apiUrl}/${id}`);
+  }
+
+  cambiarEstado(id: string, estado: string): Observable<DocumentoUploadResponse> {
+    return this.http.put<DocumentoUploadResponse>(`${this.apiUrl}/${id}/estado`, { estado });
+  }
+
+  actualizarContenido(id: string, contenido: string): Observable<DocumentoUploadResponse> {
+    return this.http.put<DocumentoUploadResponse>(`${this.apiUrl}/${id}/contenido`, { contenido });
+  }
+
+  obtenerVersiones(id: string): Observable<any[]> {
+    return this.http.get<any[]>(`${this.apiUrl}/${id}/versiones`);
+  }
+
+  crearVersion(id: string, comentario: string): Observable<any> {
+    return this.http.post<any>(`${this.apiUrl}/${id}/versiones`, { comentario });
+  }
+
+  revertirVersion(id: string, versionId: string): Observable<DocumentoUploadResponse> {
+    return this.http.post<DocumentoUploadResponse>(`${this.apiUrl}/${id}/revertir/${versionId}`, {});
+  }
+
+  eliminar(id: string): Observable<void> {
+    return this.http.delete<void>(`${this.apiUrl}/${id}`);
   }
 }

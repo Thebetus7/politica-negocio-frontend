@@ -19,6 +19,20 @@
           Flujo incompleto
         </button>
       }
+      <div class="wf-ia-prompt">
+        @if (mensajeIA()) {
+          <span class="ia-feedback" [title]="mensajeIA()">{{ mensajeIA() }}</span>
+        }
+        <textarea [(ngModel)]="promptIA"
+                  placeholder="Insertar prompt..."
+                  rows="1"
+                  class="ia-textarea"
+                  (keydown.enter)="$event.preventDefault(); ejecutarPromptIA()"
+                  [disabled]="procesandoIA()"></textarea>
+        <button class="btn-ia" (click)="ejecutarPromptIA()" [disabled]="procesandoIA() || !promptIA.trim()">
+          {{ procesandoIA() ? '⏳' : '🤖' }} IA
+        </button>
+      </div>
       <button class="btn-save" (click)="saveDiagram()">💾 Guardar</button>
     </div>
   </div>
@@ -548,7 +562,6 @@
         }
       </svg>
     </div>
-
   </div>
 
   <!-- ══════ MODAL DE PROPIEDADES DEL NODO / CONEXIÓN ══════ -->
@@ -628,6 +641,9 @@
                     <option [value]="func.userId">{{ func.userId }}</option>
                   }
                 </select>
+              </div>
+              <div class="prop-group mt-4 border-t border-gray-700/50 pt-3">
+                <app-politica-documentos-list [politicaId]="politicaId" [actividadId]="node.id"></app-politica-documentos-list>
               </div>
             }
 

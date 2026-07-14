@@ -5,3 +5,32 @@
 body {
     background-color: #f3f4f6; /* gray-100 */
 }
+
+/* Modo Oscuro para Quill Editor */
+.dark .ql-toolbar.ql-snow {
+  background-color: #1f2937 !important;
+  border: 1px solid #374151 !important;
+  border-bottom: 1px solid #374151 !important;
+}
+.dark .ql-container.ql-snow {
+  background-color: #1f2937 !important;
+  color: #f3f4f6 !important;
+  border: none !important;
+}
+.dark .ql-editor {
+  background-color: #1f2937 !important;
+  color: #f3f4f6 !important;
+}
+.dark .ql-stroke {
+  stroke: #d1d5db !important;
+}
+.dark .ql-fill {
+  fill: #d1d5db !important;
+}
+.dark .ql-picker {
+  color: #d1d5db !important;
+}
+.dark .ql-picker-options {
+  background-color: #1f2937 !important;
+  border: 1px solid #374151 !important;
+}

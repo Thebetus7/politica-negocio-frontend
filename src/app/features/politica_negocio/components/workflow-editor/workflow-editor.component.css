@@ -117,6 +117,72 @@
   box-shadow: 0 4px 16px rgba(99, 102, 241, 0.5);
 }
 
+.wf-ia-prompt {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  background: rgba(30, 30, 58, 0.6);
+  border: 1px solid #2a2a5a;
+  border-radius: 8px;
+  padding: 4px 12px;
+  margin-right: 4px;
+}
+
+.ia-textarea {
+  background: transparent;
+  border: none;
+  color: #e2e8f0;
+  font-family: inherit;
+  font-size: 0.8rem;
+  resize: none;
+  width: 260px;
+  height: 20px;
+  line-height: 20px;
+  outline: none;
+  overflow: hidden;
+  white-space: nowrap;
+}
+
+.ia-textarea::placeholder {
+  color: #64748b;
+}
+
+.btn-ia {
+  background: linear-gradient(135deg, #a855f7, #6366f1);
+  color: white;
+  border: none;
+  padding: 4px 12px;
+  border-radius: 6px;
+  font-size: 0.8rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.btn-ia:hover:not(:disabled) {
+  transform: translateY(-1px);
+  filter: brightness(1.1);
+  box-shadow: 0 2px 8px rgba(168, 85, 247, 0.4);
+}
+
+.btn-ia:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.ia-feedback {
+  font-size: 0.75rem;
+  color: #c084fc;
+  max-width: 250px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-style: italic;
+}
+
 /* ─── BODY LAYOUT ─── */
 .wf-body {
   display: flex;

@@ -57,6 +57,18 @@ export const routes: Routes = [
         loadComponent: () => import('./features/tareas/pages/tarea-list/tarea-list.component').then(m => m.TareaListComponent),
         canActivate: [roleGuard],
         data: { roles: ['FUNCIONARIO', 'ROLE_FUNCIONARIO'] }
+      },
+      {
+        path: 'documentos',
+        loadComponent: () => import('./features/documentos/pages/documento-list/documento-list.component').then(m => m.DocumentoListComponent),
+        canActivate: [roleGuard],
+        data: { roles: ['ADMINISTRADOR', 'ROLE_ADMINISTRADOR', 'FUNCIONARIO', 'ROLE_FUNCIONARIO', 'ATENCION_CLIENTE', 'ROLE_ATENCION_CLIENTE'] }
+      },
+      {
+        path: 'documentos/editar/:id',
+        loadComponent: () => import('./features/documentos/components/documento-editor/documento-editor.component').then(m => m.DocumentoEditorComponent),
+        canActivate: [roleGuard],
+        data: { roles: ['ADMINISTRADOR', 'ROLE_ADMINISTRADOR', 'FUNCIONARIO', 'ROLE_FUNCIONARIO', 'ATENCION_CLIENTE', 'ROLE_ATENCION_CLIENTE'] }
       }
     ]
   },

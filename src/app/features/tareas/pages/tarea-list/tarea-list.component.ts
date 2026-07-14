@@ -48,9 +48,15 @@ interface ArchivoEstado {
                     <p class="text-sm text-gray-600 dark:text-gray-400 mt-1 italic">Info inicio: {{ t.portafolioJson }}</p>
                   }
                 </div>
-                <button (click)="abrirTarea(t)" class="px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 text-sm font-medium">
-                  Atender
-                </button>
+                <div class="flex items-center gap-2">
+                  <input type="file" #fileInput class="hidden" accept=".pdf,.doc,.docx,.xls,.xlsx" (change)="subirDocumentoDirecto($event, t, fileInput)" />
+                  <button type="button" (click)="fileInput.click()" class="px-3 py-2 bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 dark:hover:bg-gray-600 text-gray-700 dark:text-gray-200 rounded-lg text-sm font-medium flex items-center gap-1.5" title="Añadir documento (PDF, Word, Excel)">
+                    <span>📎</span> <span class="hidden sm:inline">+ Doc</span>
+                  </button>
+                  <button (click)="abrirTarea(t)" class="px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 text-sm font-medium">
+                    Atender
+                  </button>
+                </div>
               </div>
             </div>
           }
@@ -771,6 +777,25 @@ export class TareaListComponent implements OnInit, OnDestroy {
       error: (err) => {
         this.submitting.set(false);
         this.submitError.set(err.error?.message || 'Error al completar la actividad');
+      }
+    });
+  }
+
+  subirDocumentoDirecto(event: Event, t: TareaFuncionario, fileInput: HTMLInputElement) {
+    const file = fileInput.files?.[0];
+    if (!file) return;
+
+    this.documentoService.upload(file, {
+      actividadId: t.actividadId,
+      portafolioId: t.portafolioId
+    }).subscribe({
+      next: (doc) => {
+        alert(`Documento "${doc.nombreOriginal}" subido con éxito y enviado para aprobación.`);
+        fileInput.value = '';
+      },
+      error: (err) => {
+        alert('Error al subir el documento: ' + (err.error?.message || err.message));
+        fileInput.value = '';
       }
     });
   }
