@@ -1,0 +1,12 @@
+version: '3.8'
+
+services:
+  frontend:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: politica_frontend
+    restart: always
+    ports:
+      # Expone el puerto 4200 del host apuntando al puerto 80 de Nginx interno
+      - "4200:80"

@@ -8,9 +8,9 @@ Una vez que tengas creados los archivos `nginx.conf`, `Dockerfile` y `docker-com
 
 Antes de compilar la imagen de producción, debes asegurarte de que tu frontend apunte a la dirección correcta del servidor API:
 
-1. Ve a la carpeta `src/environments/` de tu frontend.
-2. Abre el archivo de configuración de producción (ej. `environment.prod.ts`).
-3. Reemplaza el endpoint de desarrollo por tu URL de API de producción (ej. `http://IP_PUBLICA_EC2:8081` o `https://api.tuapp.com`).
+1. Abre el archivo [api-config.ts](file:///c:/EDBERTO/ULT%20SEMESTRE/SW1/1ER%20parcial/SW1_PN_1_2026/politica-negocio-frontend/src/app/core/services/api-config.ts).
+2. Asegúrate de descomentar el **CASO 2** (Servidor en la Nube / VPS) y establecer la dirección IP pública o dominio de tu backend.
+3. Comenta los demás casos (como el Caso 1 de desarrollo local) para que no haya conflictos.
 
 ---
 
