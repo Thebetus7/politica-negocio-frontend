@@ -1,12 +1,14 @@
-import { Injectable } from '@angular/core';
+import { Injectable, NgZone, inject } from '@angular/core';
 import { Client } from '@stomp/stompjs';
 import SockJS from 'sockjs-client';
 import { Observable, Subject } from 'rxjs';
+import { BASE_URL } from '../../../core/services/api-config';
 
 @Injectable({
   providedIn: 'root'
 })
 export class DiagramService {
+  private ngZone = inject(NgZone);
   private stompClient!: Client;
   private diagramUpdates = new Subject<any>();
   private cursorUpdates = new Subject<any>();
@@ -35,7 +37,7 @@ export class DiagramService {
     this.currentPoliticaId = politicaId;
 
     this.stompClient = new Client({
-      webSocketFactory: () => new SockJS('http://localhost:8081/ws-diagram'),
+      webSocketFactory: () => new SockJS(`${BASE_URL}/ws-diagram`),
       debug: (str) => console.log('STOMP: ', str),
       reconnectDelay: 5000,
     });
@@ -47,9 +49,11 @@ export class DiagramService {
       this.stompClient.subscribe(`/topic/diagram/${politicaId}`, (message) => {
         if (message.body) {
           try {
-            this.diagramUpdates.next(JSON.parse(message.body));
+            const parsed = JSON.parse(message.body);
+            // Emitir DENTRO de NgZone para que Angular detecte los cambios
+            this.ngZone.run(() => this.diagramUpdates.next(parsed));
           } catch {
-            this.diagramUpdates.next(message.body);
+            this.ngZone.run(() => this.diagramUpdates.next(message.body));
           }
         }
       });
@@ -58,9 +62,10 @@ export class DiagramService {
       this.stompClient.subscribe(`/topic/diagram/cursors/${politicaId}`, (message) => {
         if (message.body) {
           try {
-            this.cursorUpdates.next(JSON.parse(message.body));
+            const parsed = JSON.parse(message.body);
+            this.ngZone.run(() => this.cursorUpdates.next(parsed));
           } catch {
-            this.cursorUpdates.next(message.body);
+            this.ngZone.run(() => this.cursorUpdates.next(message.body));
           }
         }
       });

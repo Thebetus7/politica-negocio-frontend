@@ -20,7 +20,7 @@ export class GroqDiagramService {
   private http = inject(HttpClient);
 
   // Clave de la API y endpoint de GroqCloud
-  private apiKey = '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';
+  private apiKey = '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';
   private apiUrl = 'https://api.groq.com/openai/v1/chat/completions';
 
   /**

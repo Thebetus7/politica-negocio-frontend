@@ -182,6 +182,8 @@ export class WorkflowEditorComponent implements OnInit, AfterViewInit, OnDestroy
   private initialCenterApplied = false;
   private refreshFlujoTimer?: ReturnType<typeof setTimeout>;
   private dragDepaInicio?: string;
+  /** Evita re-broadcast cuando estamos aplicando una actualización remota */
+  private isApplyingRemoteUpdate = false;
 
   // Lane layout
   private readonly defaultLaneWidth = 250;
@@ -1249,8 +1251,12 @@ export class WorkflowEditorComponent implements OnInit, AfterViewInit, OnDestroy
 
   // ──────── WebSocket ────────
   private broadcastUpdate(): void {
+    // No reenviar si estamos procesando una actualización remota (evita eco)
+    if (this.isApplyingRemoteUpdate) return;
+    const user = this.authService.currentUser();
     this.diagramService.sendDiagramUpdate({
       type: 'full_sync',
+      userId: user?.id,
       nodes: this.nodes(),
       links: this.links(),
     });
@@ -1258,9 +1264,23 @@ export class WorkflowEditorComponent implements OnInit, AfterViewInit, OnDestroy
 
   private handleRemoteUpdate(data: any): void {
     if (data.type === 'full_sync') {
-      // Recargar del servidor para evitar conflictos
-      this.loadActividades();
-      this.loadFlujos();
+      // Ignorar nuestras propias actualizaciones (eco del servidor)
+      const currentUser = this.authService.currentUser();
+      if (data.userId && data.userId === currentUser?.id) return;
+
+      // Aplicar directamente los datos del mensaje WebSocket sin llamadas HTTP
+      this.isApplyingRemoteUpdate = true;
+      try {
+        if (Array.isArray(data.nodes)) {
+          this.nodes.set(data.nodes);
+        }
+        if (Array.isArray(data.links)) {
+          this.links.set(data.links);
+        }
+      } finally {
+        this.isApplyingRemoteUpdate = false;
+      }
+      // Refrescar estado de flujo en background (solo UI badge)
       this.refreshFlujoEstado();
     }
   }

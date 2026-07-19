@@ -6,7 +6,7 @@
 // export const BASE_URL = 'http://localhost:8081';
 //
 // CASO 2: Servidor en la Nube / VPS (Despliegue externo)
-export const BASE_URL = 'http://localhost:8081';
+export const BASE_URL = 'http://18.223.28.79:8081';
 //
 // CASO 3: Red Local / Dispositivo Móvil Físico (Misma red WiFi)
 // Reemplaza por la IP LAN local de tu computadora para que tu celular lo detecte

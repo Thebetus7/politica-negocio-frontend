@@ -1,12 +1,14 @@
-import { Injectable } from '@angular/core';
+import { Injectable, NgZone, inject } from '@angular/core';
 import { Client } from '@stomp/stompjs';
 import SockJS from 'sockjs-client';
 import { Observable, Subject } from 'rxjs';
+import { BASE_URL } from './api-config';
 
 @Injectable({
   providedIn: 'root'
 })
 export class DocumentoSocketService {
+  private ngZone = inject(NgZone);
   private stompClient!: Client;
   private documentUpdates = new Subject<any>();
   private cursorUpdates = new Subject<any>();
@@ -32,7 +34,7 @@ export class DocumentoSocketService {
     this.currentDocumentoId = documentoId;
 
     this.stompClient = new Client({
-      webSocketFactory: () => new SockJS('http://localhost:8081/ws-diagram'),
+      webSocketFactory: () => new SockJS(`${BASE_URL}/ws-diagram`),
       debug: (str) => console.log('STOMP DOCS: ', str),
       reconnectDelay: 5000,
     });
@@ -44,9 +46,11 @@ export class DocumentoSocketService {
       this.stompClient.subscribe(`/topic/documento/${documentoId}`, (message) => {
         if (message.body) {
           try {
-            this.documentUpdates.next(JSON.parse(message.body));
+            const parsed = JSON.parse(message.body);
+            // Emitir DENTRO de NgZone para que Angular detecte los cambios
+            this.ngZone.run(() => this.documentUpdates.next(parsed));
           } catch {
-            this.documentUpdates.next(message.body);
+            this.ngZone.run(() => this.documentUpdates.next(message.body));
           }
         }
       });
@@ -55,9 +59,10 @@ export class DocumentoSocketService {
       this.stompClient.subscribe(`/topic/documento/cursors/${documentoId}`, (message) => {
         if (message.body) {
           try {
-            this.cursorUpdates.next(JSON.parse(message.body));
+            const parsed = JSON.parse(message.body);
+            this.ngZone.run(() => this.cursorUpdates.next(parsed));
           } catch {
-            this.cursorUpdates.next(message.body);
+            this.ngZone.run(() => this.cursorUpdates.next(message.body));
           }
         }
       });

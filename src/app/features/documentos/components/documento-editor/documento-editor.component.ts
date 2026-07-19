@@ -130,6 +130,7 @@ interface CursorRemoto {
     :host ::ng-deep .ql-container.ql-snow {
       border: none !important;
       font-family: inherit;
+      position: relative;
     }
     :host ::ng-deep .ql-editor {
       min-height: 500px;
@@ -170,6 +171,34 @@ interface CursorRemoto {
       background-color: #1f2937 !important;
       border: 1px solid #374151 !important;
     }
+    /* ── Cursores remotos ── */
+    :host ::ng-deep .remote-cursor-widget {
+      position: absolute;
+      pointer-events: none;
+      z-index: 10;
+      transition: left 0.12s ease-out, top 0.12s ease-out;
+    }
+    :host ::ng-deep .remote-cursor-line {
+      width: 2px;
+      height: 100%;
+      animation: cursor-blink 1.2s ease-in-out infinite;
+    }
+    :host ::ng-deep .remote-cursor-label {
+      position: absolute;
+      top: -18px;
+      left: -1px;
+      font-size: 10px;
+      font-weight: 700;
+      color: #fff;
+      padding: 1px 5px;
+      border-radius: 3px 3px 3px 0;
+      white-space: nowrap;
+      line-height: 14px;
+    }
+    @keyframes cursor-blink {
+      0%, 100% { opacity: 1; }
+      50% { opacity: 0.4; }
+    }
   `]
 })
 export class DocumentoEditorComponent implements OnInit, OnDestroy, AfterViewInit {
@@ -200,6 +229,8 @@ export class DocumentoEditorComponent implements OnInit, OnDestroy, AfterViewIni
   private userColor = '';
   private debounceTimer: any;
   private cleanupTimer: any;
+  /** Elementos DOM de cursores remotos dentro del editor Quill */
+  private cursorElements = new Map<string, HTMLElement>();
 
   listaColaboradores = computed(() => {
     return Object.values(this.colaboradores()).filter(c => Date.now() - c.lastActive < 10000); // Activos en últimos 10s
@@ -224,20 +255,35 @@ export class DocumentoEditorComponent implements OnInit, OnDestroy, AfterViewIni
 
     // Escuchar actualizaciones de texto remotas
     this.socketTextSub = this.socketService.getDocumentUpdates().subscribe((msg: any) => {
+      console.log('[DocEditor] Mensaje de texto recibido:', msg.usuarioId, 'yo:', this.currentUserId, 'contenido:', msg.contenido?.substring(0, 80));
       // Ignorar si el cambio es nuestro
       if (msg.usuarioId === this.currentUserId) return;
+      if (!msg.contenido && msg.contenido !== '') return;
 
       this.texto = msg.contenido;
       if (this.quill) {
         this.isUpdatingFromSocket = true;
         const range = this.quill.getSelection();
-        this.quill.root.innerHTML = this.texto;
+        // Aplicar contenido remoto al editor
+        try {
+          const delta = this.quill.clipboard.convert({ html: this.texto });
+          this.quill.setContents(delta, 'silent');
+          console.log('[DocEditor] Contenido aplicado via setContents');
+        } catch (e) {
+          // Fallback: asignación directa al DOM
+          console.warn('[DocEditor] setContents falló, usando innerHTML:', e);
+          this.quill.root.innerHTML = this.texto;
+        }
         if (range) {
           setTimeout(() => {
-            this.quill.setSelection(range.index, range.length);
+            try { this.quill.setSelection(range.index, range.length); } catch {}
+            this.isUpdatingFromSocket = false;
           });
+        } else {
+          this.isUpdatingFromSocket = false;
         }
-        this.isUpdatingFromSocket = false;
+        // Actualizar posición de cursores remotos tras cambio de contenido
+        this.renderRemoteCursors();
       }
     });
 
@@ -256,6 +302,8 @@ export class DocumentoEditorComponent implements OnInit, OnDestroy, AfterViewIni
         };
         return nuevoMap;
       });
+      // Renderizar la posición del cursor remoto en el editor
+      this.renderRemoteCursors();
     });
 
     // Limpiador periódico de colaboradores inactivos
@@ -315,6 +363,9 @@ export class DocumentoEditorComponent implements OnInit, OnDestroy, AfterViewIni
     this.socketCursorSub?.unsubscribe();
     this.socketService.disconnect();
     if (this.cleanupTimer) clearInterval(this.cleanupTimer);
+    // Limpiar elementos DOM de cursores remotos
+    this.cursorElements.forEach(el => el.remove());
+    this.cursorElements.clear();
   }
 
   cargarDatosDocumento(id: string) {
@@ -458,6 +509,52 @@ export class DocumentoEditorComponent implements OnInit, OnDestroy, AfterViewIni
       return d.toLocaleDateString() + ' ' + d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
     } catch {
       return fechaStr;
+    }
+  }
+
+  /**
+   * Renderiza (o actualiza) los cursores remotos dentro del contenedor Quill.
+   * Usa getBounds() de Quill para convertir el índice del cursor a píxeles.
+   */
+  private renderRemoteCursors(): void {
+    if (!this.quill) return;
+
+    const container: HTMLElement = this.quill.container;
+    const activos = this.listaColaboradores();
+    const activoIds = new Set(activos.map(c => c.userId));
+
+    // Eliminar cursores de usuarios que ya no están activos
+    for (const [userId, el] of this.cursorElements) {
+      if (!activoIds.has(userId)) {
+        el.remove();
+        this.cursorElements.delete(userId);
+      }
+    }
+
+    // Crear / actualizar cursores para cada colaborador activo
+    for (const colab of activos) {
+      let cursorEl = this.cursorElements.get(colab.userId);
+
+      if (!cursorEl) {
+        cursorEl = document.createElement('div');
+        cursorEl.className = 'remote-cursor-widget';
+        cursorEl.innerHTML = `
+          <div class="remote-cursor-line" style="background-color: ${colab.color}"></div>
+          <div class="remote-cursor-label" style="background-color: ${colab.color}">${colab.nombre}</div>
+        `;
+        container.appendChild(cursorEl);
+        this.cursorElements.set(colab.userId, cursorEl);
+      }
+
+      try {
+        const bounds = this.quill.getBounds(colab.position);
+        cursorEl.style.left = `${bounds.left}px`;
+        cursorEl.style.top = `${bounds.top}px`;
+        cursorEl.style.height = `${bounds.height}px`;
+      } catch {
+        // Posición fuera de rango, ocultar temporalmente
+        cursorEl.style.left = '-9999px';
+      }
     }
   }
 
